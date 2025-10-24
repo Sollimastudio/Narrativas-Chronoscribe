@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 type FilePreview = {
   name: string;
@@ -45,6 +46,14 @@ const TAREFAS = [
 ];
 
 const MAX_SNIPPET_CHARS = 1200;
+
+type GenerationHistoryItem = {
+  id: string;
+  createdAt: string;
+  taskLabel: string;
+  content: string;
+  modelUsed?: string;
+};
 
 function isProbablyTextFile(file: File) {
   if (file.type.startsWith("text/")) return true;
@@ -94,6 +103,8 @@ export default function ChronoscribePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [modelUsed, setModelUsed] = useState("");
+  const [history, setHistory] = useState<GenerationHistoryItem[]>([]);
 
   const handleObjetivoToggle = useCallback((item: string) => {
     setObjetivos((prev) =>
@@ -185,6 +196,7 @@ export default function ChronoscribePage() {
       const contentType = response.headers.get("content-type") ?? "";
       const isJson = contentType.includes("application/json");
       const payload = isJson ? await response.json() : await response.text();
+      const modelHeader = response.headers.get("x-vertex-model") ?? "";
 
       if (!response.ok) {
         if (isJson && payload && typeof payload === "object") {
@@ -207,11 +219,29 @@ export default function ChronoscribePage() {
       }
 
       const text = isJson
-        ? (payload as { result?: string; data?: string })?.result ??
-          (payload as { result?: string; data?: string })?.data ??
+        ? (payload as { result?: string; data?: string; text?: string })?.result ??
+          (payload as { result?: string; data?: string; text?: string })?.data ??
+          (payload as { result?: string; data?: string; text?: string })?.text ??
           JSON.stringify(payload, null, 2)
         : (payload as string);
-      setResult(text);
+
+      const normalized = typeof text === "string" ? text.trim() : "";
+
+      setResult(normalized);
+      setModelUsed(modelHeader);
+      if (normalized) {
+        setHistory((prev) => {
+          const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const entry: GenerationHistoryItem = {
+            id,
+            createdAt: new Date().toISOString(),
+            taskLabel: tarefa || "Entrega do Arquiteto",
+            content: normalized,
+            modelUsed: modelHeader || undefined,
+          };
+          return [entry, ...prev].slice(0, 10);
+        });
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro inesperado ao gerar conteúdo.";
@@ -219,7 +249,33 @@ export default function ChronoscribePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [promptParaIA, superPrompt]);
+  }, [promptParaIA, superPrompt, tarefa]);
+
+  const handleCopy = useCallback(async (text: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (clipError) {
+      console.error("Falha ao copiar para a área de transferência:", clipError);
+    }
+  }, []);
+
+  const handleDownload = useCallback((text: string, filenameHint: string) => {
+    if (!text) return;
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const safeName = filenameHint
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-+|-+$/g, "");
+    anchor.href = url;
+    anchor.download = `${safeName || "narrativa"}-${Date.now()}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-950 pb-20 text-neutral-100">
@@ -415,9 +471,36 @@ export default function ChronoscribePage() {
 
         <section className="flex h-full flex-col gap-6">
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/70 p-6 shadow-lg shadow-black/50">
-            <h2 className="text-xl font-semibold text-yellow-200">
-              Resultado do Arquiteto
-            </h2>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold text-yellow-200">
+                  Resultado do Arquiteto
+                </h2>
+                {modelUsed && (
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Modelo utilizado: {modelUsed}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-200 transition hover:border-yellow-400 hover:text-yellow-200 disabled:cursor-not-allowed disabled:text-neutral-600"
+                  onClick={() => handleCopy(result)}
+                  disabled={!result}
+                >
+                  Copiar
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-200 transition hover:border-yellow-400 hover:text-yellow-200 disabled:cursor-not-allowed disabled:text-neutral-600"
+                  onClick={() => handleDownload(result, tarefa || "narrativa")}
+                  disabled={!result}
+                >
+                  Baixar .md
+                </button>
+              </div>
+            </div>
             <div className="mt-4 min-h-[320px] rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 text-sm text-neutral-200">
               {isLoading && <p className="animate-pulse text-yellow-300">Orquestrando a narrativa...</p>}
               {!isLoading && errorMessage && (
@@ -425,9 +508,9 @@ export default function ChronoscribePage() {
               )}
               {!isLoading && !errorMessage && result && (
                 <article className="prose prose-invert max-w-none text-neutral-100">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-neutral-200">
+                  <ReactMarkdown className="[&_*]:whitespace-pre-wrap">
                     {result}
-                  </pre>
+                  </ReactMarkdown>
                 </article>
               )}
               {!isLoading && !errorMessage && !result && (
@@ -438,6 +521,58 @@ export default function ChronoscribePage() {
               )}
             </div>
           </div>
+
+          {history.length > 1 && (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 text-xs text-neutral-400">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">
+                Histórico de entregas
+              </h3>
+              <ul className="mt-3 space-y-3">
+                {history.slice(1).map((item) => (
+                  <li
+                    key={item.id}
+                    className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3 text-neutral-300"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+                      <span>{new Date(item.createdAt).toLocaleString()}</span>
+                      {item.modelUsed && <span>Modelo: {item.modelUsed}</span>}
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-neutral-200">
+                      {item.taskLabel}
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        className="rounded border border-neutral-700 px-3 py-1 text-xs text-neutral-200 hover:border-yellow-400 hover:text-yellow-200"
+                        onClick={() => {
+                          setResult(item.content);
+                          setModelUsed(item.modelUsed ?? "");
+                        }}
+                      >
+                        Ver no painel
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-neutral-700 px-3 py-1 text-xs text-neutral-200 hover:border-yellow-400 hover:text-yellow-200"
+                        onClick={() => handleCopy(item.content)}
+                      >
+                        Copiar
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-neutral-700 px-3 py-1 text-xs text-neutral-200 hover:border-yellow-400 hover:text-yellow-200"
+                        onClick={() =>
+                          handleDownload(item.content, item.taskLabel)
+                        }
+                      >
+                        Baixar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-xs text-neutral-400">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">

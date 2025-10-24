@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { VertexAI } from "@google-cloud/vertexai";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 type GenerateBody = {
   superPrompt?: string;
@@ -9,6 +12,8 @@ type GenerateBody = {
 const DEFAULT_MODEL = "gemini-1.5-pro";
 const DEFAULT_LOCATION = "us-central1";
 const FALLBACK_MODEL = "gemini-pro";
+const TMP_KEY_FILENAME = `vertex-key-${process.pid}.json`;
+let cachedKeyPath: string | undefined;
 
 function extractErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -115,6 +120,7 @@ export async function POST(request: Request) {
     const vertexAI = new VertexAI({
       project: projectId,
       location,
+      keyFilename: resolveCredentialsFile(),
     });
 
     let generation;
@@ -192,5 +198,29 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
+  }
+}
+
+function resolveCredentialsFile() {
+  if (cachedKeyPath) return cachedKeyPath;
+
+  const directPath = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+  if (directPath) {
+    cachedKeyPath = directPath;
+    return cachedKeyPath;
+  }
+
+  const base64 = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64?.trim();
+  if (!base64) return undefined;
+
+  const decoded = Buffer.from(base64, "base64").toString("utf8");
+  const targetPath = path.join(os.tmpdir(), TMP_KEY_FILENAME);
+  try {
+    fs.writeFileSync(targetPath, decoded, { encoding: "utf8", mode: 0o600 });
+    cachedKeyPath = targetPath;
+    return cachedKeyPath;
+  } catch (writeError) {
+    console.error("[generate] falha ao gravar chave temporária:", writeError);
+    return undefined;
   }
 }

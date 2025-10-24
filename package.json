@@ -12,7 +12,8 @@
     "@google-cloud/vertexai": "^1.10.0",
     "next": "^14.2.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
