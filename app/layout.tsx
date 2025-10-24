@@ -1,18 +1,22 @@
+import type { ReactNode } from "react";
 import "./globals.css";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"] });
+import { AuthSessionProvider } from "@/components/session-provider";
 
 export const metadata = {
   title: "Narrativas Chronoscribe",
   description: "Arquiteto de Narrativas IA",
 };
 
-export default function RootLayout({ children }) {
+type RootLayoutProps = {
+  children: ReactNode;
+};
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="pt-BR">
-      <body className={inter.className}>{children}</body>
+      <body>
+        <AuthSessionProvider>{children}</AuthSessionProvider>
+      </body>
     </html>
   );
 }
-

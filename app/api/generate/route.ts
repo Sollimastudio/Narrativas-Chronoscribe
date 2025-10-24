@@ -3,6 +3,9 @@ import { VertexAI } from "@google-cloud/vertexai";
 import fs from "fs";
 import os from "os";
 import path from "path";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 type GenerateBody = {
   superPrompt?: string;
@@ -86,6 +89,18 @@ async function runGeneration(opts: {
 
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    const userId = session?.user
+      ? ((session.user as { id?: string }).id ?? null)
+      : null;
+
+    if (!session || !userId) {
+      return NextResponse.json(
+        { error: "Autenticação necessária para gerar conteúdo." },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as GenerateBody;
     const { superPrompt, promptParaIA } = body;
 
@@ -117,10 +132,14 @@ export async function POST(request: Request) {
     const fallbackModel =
       process.env.GEMINI_FALLBACK_MODEL ?? FALLBACK_MODEL;
 
+    const credentialPath = resolveCredentialsFile();
+    if (credentialPath) {
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
+    }
+
     const vertexAI = new VertexAI({
       project: projectId,
       location,
-      keyFilename: resolveCredentialsFile(),
     });
 
     let generation;
@@ -148,6 +167,17 @@ export async function POST(request: Request) {
       } else {
         throw primaryError;
       }
+    }
+
+    try {
+      await prisma.usageLog.create({
+        data: {
+          userId,
+          promptId: generation.modelUsed,
+        },
+      });
+    } catch (logError) {
+      console.warn("[generate] não foi possível salvar log de uso:", logError);
     }
 
     return new Response(generation.text, {

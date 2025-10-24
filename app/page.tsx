@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 
 type FilePreview = {
@@ -90,6 +92,8 @@ async function readFileSafely(file: File): Promise<FilePreview> {
 }
 
 export default function ChronoscribePage() {
+  const { data: session, status: sessionStatus } = useSession();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<FilePreview[]>([]);
@@ -277,22 +281,81 @@ export default function ChronoscribePage() {
     URL.revokeObjectURL(url);
   }, []);
 
+  if (sessionStatus === "loading") {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <p className="text-neutral-400 animate-pulse">Preparando o Arquiteto...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-6">
+        <div className="max-w-2xl rounded-2xl border border-neutral-800 bg-neutral-900/70 p-10 text-center shadow-lg shadow-black/50">
+          <h1 className="text-3xl font-semibold text-yellow-300">
+            Liberte o Arquiteto de Narrativas
+          </h1>
+          <p className="mt-4 text-neutral-300">
+            Crie sua conta ou faça login para acessar o estúdio completo, salvar histórico e
+            acompanhar seus limites de uso.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/login"
+              className="w-full sm:w-auto rounded-xl border border-yellow-500/40 bg-yellow-400/20 px-6 py-3 text-lg font-semibold text-yellow-200 transition hover:bg-yellow-400/30"
+            >
+              Já tenho conta
+            </Link>
+            <Link
+              href="/register"
+              className="w-full sm:w-auto rounded-xl border border-neutral-700 px-6 py-3 text-lg font-semibold text-neutral-200 transition hover:border-yellow-400 hover:text-yellow-200"
+            >
+              Criar acesso
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentUserName =
+    session.user?.name || session.user?.email || "Criador";
+
   return (
     <div className="min-h-screen bg-neutral-950 pb-20 text-neutral-100">
       <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-yellow-400 md:text-4xl">
-              Narrativas Chronoscribe
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-neutral-400 md:text-base">
-              O Arquiteto de Narrativas transforma caos mental em frameworks, cronologias e ativos
-              criativos prontos para publicação. Forneça contexto, defina a estratégia e execute.
-            </p>
-          </div>
-          <div className="flex flex-col items-start gap-2 text-xs uppercase tracking-wide text-neutral-500 md:text-right">
-            <span>Motor: Gemini 1.5 Pro (Vertex AI)</span>
-            <span>Contexto estendido · Direção de arte · Produção multimídia</span>
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-10">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-yellow-400 md:text-4xl">
+                Narrativas Chronoscribe
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-neutral-400 md:text-base">
+                O Arquiteto de Narrativas transforma caos mental em frameworks, cronologias e
+                ativos criativos prontos para publicação. Forneça contexto, defina a estratégia e
+                execute.
+              </p>
+            </div>
+            <div className="flex items-start justify-between gap-4 md:flex-col md:items-end">
+              <div className="text-xs uppercase tracking-wide text-neutral-500 text-right">
+                <span>Motor: Gemini 1.5 Pro (Vertex AI)</span>
+                <br />
+                <span>Contexto estendido · Direção de arte · Produção multimídia</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-full border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-300">
+                  {currentUserName}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-200 transition hover:border-red-400 hover:text-red-300"
+                >
+                  Sair
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </header>
