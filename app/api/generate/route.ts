@@ -1,256 +1,110 @@
-import { NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
-import fs from "fs";
-import os from "os";
-import path from "path";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import { VertexAI } from '@google-cloud/vertexai';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
-type GenerateBody = {
-  superPrompt?: string;
-  promptParaIA?: string;
-};
+// --- Variáveis de Ambiente e Fallback ---
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'chronoscribe-narratives';
+const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-1.0-pro'; // Fallback mais seguro
+const CREDENTIALS_PATH = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+const CREDENTIALS_BASE64 = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
 
-const DEFAULT_MODEL = "gemini-1.5-pro";
-const DEFAULT_LOCATION = "us-central1";
-const FALLBACK_MODEL = "gemini-pro";
-const TMP_KEY_FILENAME = `vertex-key-${process.pid}.json`;
-let cachedKeyPath: string | undefined;
+// Caminho temporário para o arquivo JSON da chave Base64 (se usado)
+const TEMP_CREDENTIALS_FILE = path.join(os.tmpdir(), 'vertex-key-temp.json');
 
-function extractErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === "object" && "message" in error) {
-    const maybe = (error as { message?: unknown }).message;
-    if (typeof maybe === "string") return maybe;
-  }
-  return "Falha desconhecida.";
-}
-
-function isModelMissing(error: unknown) {
-  const message = extractErrorMessage(error);
-  const code = (error as { code?: unknown }).code;
-  const status = (error as { status?: unknown }).status;
-  return (
-    message.includes("NOT_FOUND") ||
-    message.includes('"code":404') ||
-    message.includes("status obtido: 404") ||
-    code === 404 ||
-    code === "NOT_FOUND" ||
-    status === 404 ||
-    status === "NOT_FOUND"
-  );
-}
-
-async function runGeneration(opts: {
-  vertexAI: VertexAI;
-  model: string;
-  promptParaIA: string;
-  superPrompt?: string;
-}) {
-  const { vertexAI, model, promptParaIA, superPrompt } = opts;
-
-  const generativeModel = vertexAI.getGenerativeModel({
-    model,
-    generationConfig: {
-      temperature: 0.65,
-      topP: 0.9,
-      topK: 32,
-      maxOutputTokens: 2048,
-    },
-  });
-
-  const response = await generativeModel.generateContent({
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: promptParaIA }],
-      },
-    ],
-    systemInstruction: superPrompt
-      ? {
-          role: "system",
-          parts: [{ text: superPrompt }],
-        }
-      : undefined,
-  });
-
-  const text =
-    response.response.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-  if (!text) {
-    throw new Error(
-      "A IA não retornou conteúdo textual. Ajuste o prompt ou tente novamente."
-    );
+// Função que resolve o arquivo de credenciais (caminho local ou Base64)
+function resolveCredentialsFile(): string | undefined {
+  // 1. Prioriza o caminho local se estiver definido (uso em desenvolvimento)
+  if (CREDENTIALS_PATH) {
+    return CREDENTIALS_PATH;
   }
 
-  return { text, modelUsed: model };
+  // 2. Se houver Base64 (uso em Vercel/Produção), decodifica e salva em arquivo temporário
+  if (CREDENTIALS_BASE64) {
+    try {
+      // Decodifica o Base64 para JSON
+      const jsonContent = Buffer.from(CREDENTIALS_BASE64, 'base64').toString('utf8');
+      
+      // Salva o JSON em um arquivo temporário
+      fs.writeFileSync(TEMP_CREDENTIALS_FILE, jsonContent, 'utf8');
+
+      // Retorna o caminho do arquivo temporário
+      return TEMP_CREDENTIALS_FILE;
+    } catch (error) {
+      console.error("ERRO [Base64 Decode]: Falha ao decodificar ou salvar o arquivo de credenciais Base64.", error);
+      return undefined; // Falha na decodificação
+    }
+  }
+
+  // 3. Se nada for encontrado, retorna undefined para usar o Application Default Credentials (gcloud auth)
+  return undefined; 
 }
 
-export async function POST(request: Request) {
+
+export async function POST(request: NextRequest) {
+  let credentialsFilePath: string | undefined;
+
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user
-      ? ((session.user as { id?: string }).id ?? null)
-      : null;
+    const { promptParaIA, superPrompt } = await request.json();
 
-    if (!session || !userId) {
-      return NextResponse.json(
-        { error: "Autenticação necessária para gerar conteúdo." },
-        { status: 401 }
-      );
+    // Resolve o caminho das credenciais (se for Base64, ele salva o arquivo e pega o caminho)
+    credentialsFilePath = resolveCredentialsFile();
+    
+    // Configuração do Vertex AI
+    const vertexInit: { project: string; location: string; keyFile?: string } = {
+      project: PROJECT_ID,
+      location: LOCATION,
+    };
+
+    // Adiciona o caminho da chave SOMENTE se ele foi resolvido
+    if (credentialsFilePath) {
+      // CORREÇÃO CRÍTICA: O Next.js/Vertex SDK usa 'keyFile', não 'keyFilename'.
+      vertexInit.keyFile = credentialsFilePath; 
     }
 
-    const body = (await request.json()) as GenerateBody;
-    const { superPrompt, promptParaIA } = body;
+    const vertex_ai = new VertexAI(vertexInit);
 
-    if (!promptParaIA || !promptParaIA.trim()) {
-      return NextResponse.json(
-        { error: "O campo promptParaIA é obrigatório." },
-        { status: 400 }
-      );
+    // Definição do Modelo
+    const model = MODEL_NAME; 
+    const generativeModel = vertex_ai.getGenerativeModel({ model });
+
+    // Montagem da Requisição (Pronto para o SuperPrompt)
+    const req = {
+      contents: [{ role: 'user', parts: [{ text: promptParaIA }] }],
+      systemInstruction: { parts: [{ text: superPrompt }] },
+    };
+
+    // 5. Execução e Tratamento da Resposta
+    const result = await generativeModel.generateContent(req);
+    const resultText = result.response.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!resultText) {
+      return new NextResponse('Erro: A IA não retornou uma resposta válida ou foi bloqueada.', { status: 500 });
     }
 
-    const projectId =
-      process.env.GOOGLE_CLOUD_PROJECT ??
-      process.env.GCLOUD_PROJECT ??
-      process.env.GOOGLE_PROJECT_ID ??
-      "";
-
-    if (!projectId) {
-      return NextResponse.json(
-        {
-          error:
-            "Variável de ambiente GOOGLE_CLOUD_PROJECT (ou GCLOUD_PROJECT) não configurada.",
-        },
-        { status: 500 }
-      );
-    }
-
-    const location = process.env.GOOGLE_CLOUD_LOCATION ?? DEFAULT_LOCATION;
-    const primaryModel = process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
-    const fallbackModel =
-      process.env.GEMINI_FALLBACK_MODEL ?? FALLBACK_MODEL;
-
-    const credentialPath = resolveCredentialsFile();
-    if (credentialPath) {
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialPath;
-    }
-
-    const vertexAI = new VertexAI({
-      project: projectId,
-      location,
+    return new NextResponse(resultText, {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
 
-    let generation;
-    try {
-      generation = await runGeneration({
-        vertexAI,
-        model: primaryModel,
-        promptParaIA,
-        superPrompt,
-      });
-    } catch (primaryError) {
-      if (
-        isModelMissing(primaryError) &&
-        primaryModel.trim() !== fallbackModel.trim()
-      ) {
-        console.warn(
-          `[generate] modelo ${primaryModel} indisponível. Tentando fallback ${fallbackModel}.`
-        );
-        generation = await runGeneration({
-          vertexAI,
-          model: fallbackModel,
-          promptParaIA,
-          superPrompt,
-        });
-      } else {
-        throw primaryError;
+  } catch (error: any) {
+    console.error("ERRO NO SERVIDOR (route.ts):", error);
+    
+    // Trata erros de autenticação ou modelo
+    const errorMessage = error.message || String(error);
+    
+    return new NextResponse(`Erro: Falha na comunicação com o Vertex AI.\n\nDetalhes do Erro: ${errorMessage}`, { status: 500 });
+  
+  } finally {
+    // Garante que o arquivo temporário do Base64 seja deletado após o uso (limpeza e segurança)
+    if (credentialsFilePath && credentialsFilePath === TEMP_CREDENTIALS_FILE && fs.existsSync(TEMP_CREDENTIALS_FILE)) {
+      try {
+        fs.unlinkSync(TEMP_CREDENTIALS_FILE);
+      } catch (e) {
+        console.warn("Aviso de limpeza: Não foi possível deletar o arquivo temporário de credenciais.");
       }
     }
-
-    try {
-      await prisma.usageLog.create({
-        data: {
-          userId,
-          promptId: generation.modelUsed,
-        },
-      });
-    } catch (logError) {
-      console.warn("[generate] não foi possível salvar log de uso:", logError);
-    }
-
-    return new Response(generation.text, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "X-Vertex-Model": generation.modelUsed,
-      },
-    });
-  } catch (error: unknown) {
-    console.error("[generate] erro ao chamar Vertex AI:", error);
-
-    const message = extractErrorMessage(error);
-
-    const authHints = [
-      "Unable to authenticate your request",
-      "Could not load the default credentials",
-      "The Application Default Credentials are not available",
-    ];
-
-    if (authHints.some((hint) => message.includes(hint))) {
-      return NextResponse.json(
-        {
-          error:
-            "Credenciais do Google Cloud ausentes ou inválidas. Faça login com o gcloud ou informe o caminho do arquivo JSON do serviço (GOOGLE_APPLICATION_CREDENTIALS).",
-          details: message,
-        },
-        { status: 401 }
-      );
-    }
-
-    if (isModelMissing(error)) {
-      return NextResponse.json(
-        {
-          error:
-            "Modelo Gemini informado não está disponível para este projeto/região.",
-          details: "Verifique o nome do modelo no Vertex AI Model Garden.",
-        },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error:
-          "Não foi possível gerar a resposta com o Vertex AI. Verifique as credenciais e tente novamente.",
-        details: message,
-      },
-      { status: 500 }
-    );
-  }
-}
-
-function resolveCredentialsFile() {
-  if (cachedKeyPath) return cachedKeyPath;
-
-  const directPath = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
-  if (directPath) {
-    cachedKeyPath = directPath;
-    return cachedKeyPath;
-  }
-
-  const base64 = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64?.trim();
-  if (!base64) return undefined;
-
-  const decoded = Buffer.from(base64, "base64").toString("utf8");
-  const targetPath = path.join(os.tmpdir(), TMP_KEY_FILENAME);
-  try {
-    fs.writeFileSync(targetPath, decoded, { encoding: "utf8", mode: 0o600 });
-    cachedKeyPath = targetPath;
-    return cachedKeyPath;
-  } catch (writeError) {
-    console.error("[generate] falha ao gravar chave temporária:", writeError);
-    return undefined;
   }
 }

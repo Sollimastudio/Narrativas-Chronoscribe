@@ -74,6 +74,9 @@ Acesse `http://localhost:3000` (ou a porta que você escolher) para interagir co
 5. **Deploy:** a Vercel roda `npm install` + `npm run build`. Após o sucesso, o app fica disponível no domínio `https://<projeto>.vercel.app`.  
 6. (Opcional) Adicione um domínio próprio no painel da Vercel.
 
+> Dica: use `npm run release` localmente para rodar `check-env → lint → build`.  
+> Se quiser que o comando já publique na Vercel, defina antes `VERCEL_DEPLOY=1` junto com `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` e o token autenticado via `vercel login`.
+
 O comando `npm run build` é seguro porque não depende mais de downloads externos (fontes do Google foram removidas).
 
 ---
@@ -96,7 +99,10 @@ O layout é responsivo. Depois do deploy:
 | `npm run build`              | Build de produção (usado pela Vercel)                |
 | `npm run start`              | Servir a build de produção localmente                |
 | `npm run lint`               | Verificar lint                                      |
+| `npm run setup`              | Gera segredos padrão e sincroniza Prisma             |
 | `npm run encode-key -- file` | Gera a string Base64 da chave JSON para deploy       |
+| `npm run check-env`          | Confere se todas as variáveis obrigatórias existem   |
+| `npm run release`            | check-env + lint + build (e deploy opcional)        |
 | `npx prisma db push`         | Sincroniza o schema Prisma com o banco (SQLite)      |
 
 ---

@@ -1,16 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient;
-};
+// Padrão global para Next.js para evitar múltiplas instâncias
+// da mesma classe PrismaClient em desenvolvimento (Hot Reloading).
+let prisma: PrismaClient;
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient();
+} else {
+  // @ts-ignore
+  if (!global.prisma) {
+    // @ts-ignore
+    global.prisma = new PrismaClient();
+  }
+  // @ts-ignore
+  prisma = global.prisma;
 }
+
+// CORREÇÃO: Exportar o prisma como default.
+export default prisma;

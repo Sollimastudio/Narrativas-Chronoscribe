@@ -2,16 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
   const { status } = useSession();
 
-  const [justRegistered, setJustRegistered] = useState(false);
-  const [callbackUrl, setCallbackUrl] = useState("/");
-  const [email, setEmail] = useState("");
+  const params = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search);
+  }, []);
+
+  const justRegistered = params?.get("registered") === "1";
+  const callbackUrl = params?.get("callbackUrl") ?? "/";
+  const [email, setEmail] = useState(() => params?.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,14 +26,6 @@ export default function LoginPage() {
       router.replace("/");
     }
   }, [status, router]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    setJustRegistered(params.get("registered") === "1");
-    setEmail(params.get("email") ?? "");
-    setCallbackUrl(params.get("callbackUrl") ?? "/");
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
