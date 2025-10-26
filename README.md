@@ -21,7 +21,9 @@ GOOGLE_CLOUD_PROJECT=seu-projeto
 GOOGLE_CLOUD_LOCATION=us-central1
 GEMINI_MODEL=gemini-1.5-pro
 AUTH_SECRET=gere-um-valor-seguro-com-openssl-rand-base64-32
-DATABASE_URL="file:./prisma/dev.db"
+# Substitua por uma conexão Postgres (Supabase, Vercel Postgres etc.)
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?schema=public"
+# DEFAULT_PLAN_SLUG=free
 
 # Opção 1 – uso local
 GOOGLE_APPLICATION_CREDENTIALS=/caminho/para/vertex-key.json
@@ -59,7 +61,19 @@ Acesse `http://localhost:3000` (ou a porta que você escolher) para interagir co
 
 ---
 
-## 5. Fluxo de deploy simplificado (Vercel)
+## 5. Configurar o Postgres (Supabase ou Vercel Postgres)
+
+1. Crie um banco Postgres gerenciado (Supabase, Vercel Postgres ou similar).  
+2. Copie a string de conexão e atualize `DATABASE_URL` no `.env.local`.  
+3. Execute `DATABASE_URL="<sua-string>" npx prisma db push` para criar as tabelas.  
+4. Rode `npm run seed:plans` para cadastrar os planos padrão (free/creator/scale).  
+5. Rode `npm run setup` novamente para validar o ambiente.  
+
+Se ainda estiver usando SQLite local (`file:./prisma/dev.db`), lembre-se de ajustar antes do deploy público: a Vercel não consegue executar SQLite em produção.
+
+---
+
+## 6. Fluxo de deploy simplificado (Vercel)
 
 1. **Repositório:** publique o código no GitHub/GitLab (sem a chave JSON).  
 2. **Chave Base64:** execute `npm run encode-key -- chave.json` e guarde o resultado.  
@@ -69,7 +83,7 @@ Acesse `http://localhost:3000` (ou a porta que você escolher) para interagir co
    - `GOOGLE_CLOUD_LOCATION`
    - `GEMINI_MODEL`
    - `AUTH_SECRET`
-   - `DATABASE_URL` (ex.: `file:./tmp/dev.db` para ambiente de build, ou migre para um banco Postgres/MySQL hospedado)
+   - `DATABASE_URL` (use a conexão Postgres configurada no passo anterior)
    - `GOOGLE_APPLICATION_CREDENTIALS_BASE64`
 5. **Deploy:** a Vercel roda `npm install` + `npm run build`. Após o sucesso, o app fica disponível no domínio `https://<projeto>.vercel.app`.  
 6. (Opcional) Adicione um domínio próprio no painel da Vercel.
@@ -81,7 +95,7 @@ O comando `npm run build` é seguro porque não depende mais de downloads extern
 
 ---
 
-## 6. Usar no celular
+## 7. Usar no celular
 
 O layout é responsivo. Depois do deploy:
 
@@ -91,7 +105,7 @@ O layout é responsivo. Depois do deploy:
 
 ---
 
-## 7. Comandos úteis
+## 8. Comandos úteis
 
 | Comando                       | Descrição                                             |
 |------------------------------|-------------------------------------------------------|
@@ -103,14 +117,16 @@ O layout é responsivo. Depois do deploy:
 | `npm run encode-key -- file` | Gera a string Base64 da chave JSON para deploy       |
 | `npm run check-env`          | Confere se todas as variáveis obrigatórias existem   |
 | `npm run release`            | check-env + lint + build (e deploy opcional)        |
-| `npx prisma db push`         | Sincroniza o schema Prisma com o banco (SQLite)      |
+| `npm run seed:plans`         | Atualiza/inserta os planos padrão no banco          |
+| `npx prisma db push`         | Sincroniza o schema Prisma com o banco Postgres     |
 
 ---
 
-## 8. Notas rápidas
+## 9. Notas rápidas
 
 - O painel “Histórico de entregas” guarda as últimas 10 respostas; você pode restaurar, copiar ou baixar qualquer uma.
 - O acesso agora é autenticado com login/senha (NextAuth). Crie sua conta em `/register` e depois entre em `/login`.
+- Os planos padrão (Essencial, Creator, Scale) são semeados com `npm run seed:plans` e controlam os limites diário/mensal. O endpoint `/api/usage` retorna o consumo atual.
 - Futuramente é possível ampliar para planos pagos (o modelo de dados já inclui `UsageLog` para mensurar consumo).
 - Para melhorar a didática da resposta, use o campo **Diretrizes extras** antes de executar a tarefa.
 - Para integrar com outros serviços (ex.: salvar no Drive, enviar para e-mail), basta criar novas ações no Passo 3 chamando outras rotas da API.

@@ -81,16 +81,29 @@ function ensureAuthSecret(env) {
 function ensureDatabaseUrl(env) {
   if (env.DATABASE_URL) {
     console.log(`• DATABASE_URL já definido (${env.DATABASE_URL}).`);
-    return;
+    return env.DATABASE_URL;
   }
 
   const defaultUrl = '"file:./prisma/dev.db"';
   upsertEnv("DATABASE_URL", defaultUrl);
   console.log(`• DATABASE_URL definido para ${defaultUrl}.`);
+  return defaultUrl;
 }
 
 function prismaSync(env) {
   const dbUrl = (env.DATABASE_URL || '"file:./prisma/dev.db"').replace(/^"|"$/g, "");
+
+  if (
+    dbUrl.startsWith("file:") ||
+    dbUrl.includes("USER:PASSWORD@HOST") ||
+    dbUrl.includes("DATABASE?schema")
+  ) {
+    console.log(
+      "• DATABASE_URL não aponta para um Postgres válido. Pule o prisma db push automático."
+    );
+    return;
+  }
+
   console.log("• Sincronizando schema Prisma …");
 
   const result = spawnSync("npx", ["prisma", "db", "push"], {

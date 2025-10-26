@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -57,6 +57,21 @@ type GenerationHistoryItem = {
   modelUsed?: string;
 };
 
+type UsageSnapshot = {
+  plan: {
+    name: string;
+    description?: string | null;
+    dailyGenerationsLimit: number | null;
+    monthlyGenerationsLimit: number | null;
+  };
+  usage: {
+    dailyCount: number;
+    monthlyCount: number;
+    dailyLimit: number | null;
+    monthlyLimit: number | null;
+  };
+};
+
 function isProbablyTextFile(file: File) {
   if (file.type.startsWith("text/")) return true;
   return /\.(txt|md|csv|json|html|xml)$/i.test(file.name);
@@ -109,6 +124,9 @@ export default function ChronoscribePage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [modelUsed, setModelUsed] = useState("");
   const [history, setHistory] = useState<GenerationHistoryItem[]>([]);
+  const [usageSnapshot, setUsageSnapshot] = useState<UsageSnapshot | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageError, setUsageError] = useState("");
 
   const handleObjetivoToggle = useCallback((item: string) => {
     setObjetivos((prev) =>
@@ -172,6 +190,39 @@ export default function ChronoscribePage() {
       .filter(Boolean)
       .join("\n");
   }, [filePreviews, link, contextText, nicho, estilo, objetivos, tarefa, extraInstrucoes]);
+
+  const loadUsage = useCallback(async () => {
+    if (sessionStatus !== "authenticated") {
+      setUsageSnapshot(null);
+      return;
+    }
+
+    setUsageLoading(true);
+    setUsageError("");
+
+    try {
+      const response = await fetch("/api/usage");
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          (payload as { error?: string }).error || `Erro ${response.status}`
+        );
+      }
+
+      setUsageSnapshot(payload as UsageSnapshot);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao carregar limites.";
+      setUsageError(message);
+    } finally {
+      setUsageLoading(false);
+    }
+  }, [sessionStatus]);
+
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
 
   const isReadyToGenerate = useMemo(() => {
     if (!tarefa) return false;
@@ -246,6 +297,8 @@ export default function ChronoscribePage() {
           return [entry, ...prev].slice(0, 10);
         });
       }
+
+      loadUsage();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro inesperado ao gerar conteúdo.";
@@ -253,7 +306,7 @@ export default function ChronoscribePage() {
     } finally {
       setIsLoading(false);
     }
-  }, [promptParaIA, superPrompt, tarefa]);
+  }, [promptParaIA, superPrompt, tarefa, loadUsage]);
 
   const handleCopy = useCallback(async (text: string) => {
     if (!text) return;
@@ -280,6 +333,8 @@ export default function ChronoscribePage() {
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
   }, []);
+
+
 
   if (sessionStatus === "loading") {
     return (
@@ -637,14 +692,42 @@ export default function ChronoscribePage() {
             </div>
           )}
 
+
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 text-xs text-neutral-400">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-300">
               Diagnóstico instantâneo
             </h3>
+            {usageError && (
+              <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-400">
+                {usageError}
+              </p>
+            )}
             <ul className="mt-3 space-y-2">
               <li>
                 <span className="text-neutral-500">Status:</span>{" "}
                 {isReadyToGenerate ? "Pronto para executar" : "Aguardando parâmetros obrigatórios"}
+              </li>
+              <li>
+                <span className="text-neutral-500">Plano atual:</span>{" "}
+                {usageLoading
+                  ? "Carregando..."
+                  : usageSnapshot?.plan.name ?? "Plano Essencial"}
+              </li>
+              <li>
+                <span className="text-neutral-500">Uso diário:</span>{" "}
+                {usageLoading
+                  ? "Carregando..."
+                  : usageSnapshot
+                  ? `${usageSnapshot.usage.dailyCount}/${usageSnapshot.usage.dailyLimit ?? "∞"}`
+                  : "—"}
+              </li>
+              <li>
+                <span className="text-neutral-500">Uso mensal:</span>{" "}
+                {usageLoading
+                  ? "Carregando..."
+                  : usageSnapshot
+                  ? `${usageSnapshot.usage.monthlyCount}/${usageSnapshot.usage.monthlyLimit ?? "∞"}`
+                  : "—"}
               </li>
               <li>
                 <span className="text-neutral-500">Objetivos ativos:</span>{" "}

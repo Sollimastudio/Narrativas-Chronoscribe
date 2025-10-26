@@ -34,11 +34,15 @@ const OPTIONAL_AT_LEAST_ONE = [
 
 const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
 
+const placeholderDb =
+  process.env.DATABASE_URL &&
+  /USER:PASSWORD@HOST/i.test(process.env.DATABASE_URL);
+
 const optionalMissing = OPTIONAL_AT_LEAST_ONE.filter(
   (group) => !group.some((key) => process.env[key])
 );
 
-if (missing.length || optionalMissing.length) {
+if (missing.length || optionalMissing.length || placeholderDb) {
   console.error("❌ Variáveis de ambiente ausentes:");
   if (missing.length) {
     console.error("  Obrigatórias:", missing.join(", "));
@@ -47,6 +51,11 @@ if (missing.length || optionalMissing.length) {
     for (const group of optionalMissing) {
       console.error(`  Pelo menos uma deve estar definida: ${group.join(" / ")}`);
     }
+  }
+  if (placeholderDb) {
+    console.error(
+      "  DATABASE_URL parece estar com valores padrão (USER:PASSWORD@HOST). Atualize com sua string real."
+    );
   }
   process.exit(1);
 }
