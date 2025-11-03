@@ -2,30 +2,77 @@ name: 🤖 AutoDiagnóstico Diário do Narrativas-Chronoscribe
 
 on:
   schedule:
-    - cron: "0 10 * * *"  # Executa todo dia às 10h da manhã (horário UTC)
+    - cron: "0 10 * * *" # Executa todos os dias às 10h UTC
   workflow_dispatch:      # Permite rodar manualmente também
 
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
+
     steps:
       - name: 🔄 Clonar repositório
         uses: actions/checkout@v4
 
-      - name: 🧠 Ativar agente de diagnóstico
-        uses: github/copilot-actions@v1
+      - name: ⚙️ Instalar Node.js
+        uses: actions/setup-node@v4
         with:
-          agent-file: ".github/agents/my-agent.md"
-          run-mode: "analyze"
-          instructions: |
-            Analise o repositório Narrativas-Chronoscribe e:
-            - Verifique se o app está conseguindo gerar conteúdo.
-            - Detecte falhas de build, erros de dependência, APIs quebradas ou falta de chaves.
-            - Crie uma issue com o resumo em português se encontrar problemas.
-            - Se tudo estiver ok, poste um comentário automático confirmando.
+          node-version: 18
 
-      - name: 📬 Notificar resultado
-        if: always()
+      - name: 📦 Instalar dependências
         run: |
-          echo "✅ Diagnóstico diário executado. Veja as issues para detalhes."
+          if [ -f package.json ]; then
+            echo "🔍 Instalando dependências do projeto..."
+            npm install --legacy-peer-deps || echo "⚠️ Erro ao instalar dependências"
+          else
+            echo "⚠️ Nenhum package.json encontrado. Verifique a estrutura do projeto."
+          fi
+
+      - name: 🧪 Testar build do projeto
+        run: |
+          echo "🏗️ Iniciando teste de build..."
+          if [ -f package.json ]; then
+            npm run build || echo "❌ Erro ao executar o build do projeto"
+          else
+            echo "🚫 Nenhum build script encontrado no package.json"
+          fi
+
+      - name: 🔍 Verificar arquivos críticos
+        run: |
+          echo "🧠 Verificando arquivos essenciais..."
+          for file in ".env.local" "prisma/schema.prisma" "src/app/page.tsx"; do
+            if [ -f "$file" ]; then
+              echo "✅ Encontrado: $file"
+            else
+              echo "⚠️ Ausente: $file"
+            fi
+          done
+
+      - name: 🧾 Gerar relatório de diagnóstico
+        id: report
+        run: |
+          echo "📋 Gerando relatório..."
+          echo "## 🧠 Relatório de Diagnóstico - $(date)" > diagnostico.md
+          echo "" >> diagnostico.md
+          echo "### 🔹 Projeto:" >> diagnostico.md
+          echo "$(basename $(pwd))" >> diagnostico.md
+          echo "" >> diagnostico.md
+          echo "### 🔹 Logs resumidos:" >> diagnostico.md
+          echo "" >> diagnostico.md
+          tail -n 40 $(find . -type f -name "*.log" 2>/dev/null | head -n 1) >> diagnostico.md || echo "Nenhum log encontrado" >> diagnostico.md
+          echo "" >> diagnostico.md
+          echo "✅ Diagnóstico concluído em $(date)" >> diagnostico.md
+
+      - name: 🧾 Mostrar resultado no console
+        run: cat diagnostico.md
+
+      - name: 🪶 Criar Issue automática com resultado
+        if: always()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "📡 AutoDiagnóstico - $(date +'%d/%m/%Y %H:%M')"
+          content-filepath: diagnostico.md
+          labels: |
+            autodiagnostico
+            agente
+          token: ${{ secrets.GITHUB_TOKEN }}
 
