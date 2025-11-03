@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔄 Clonar repositório
+      - name: 🧩 Clonar repositório
         uses: actions/checkout@v4
 
       - name: ⚙️ Instalar Node.js
@@ -21,22 +21,23 @@ jobs:
       - name: 📦 Instalar dependências
         id: install
         run: |
-          echo "🔍 Verificando dependências..."
+          echo "🧠 Verificando dependências..."
           if [ -f package.json ]; then
             npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação de dependências"
           else
-            echo "🚫 Nenhum package.json encontrado!"
+            echo "❌ Nenhum package.json encontrado!"
           fi
 
       - name: 🧪 Testar scripts principais
         id: scripts
         run: |
-          echo "🧩 Verificando scripts..."
+          echo "🧠 Verificando scripts..."
           if grep -q "\"build\"" package.json; then
             echo "✅ Script de build encontrado."
           else
             echo "⚠️ Script de build não encontrado no package.json"
           fi
+
           if grep -q "\"start\"" package.json; then
             echo "✅ Script de start encontrado."
           else
@@ -46,42 +47,39 @@ jobs:
       - name: 🧱 Testar build
         id: build
         run: |
-          echo "🏗️ Testando build..."
-          npm run build || echo "❌ Erro ao executar o build."
+          echo "🏗️ Iniciando build..."
+          if npm run build; then
+            echo "✅ Build concluído com sucesso!"
+          else
+            echo "❌ Falha no build."
+          fi
 
-      - name: 🔍 Verificar variáveis de ambiente
+      - name: 🧾 Verificar variáveis de ambiente
         id: envcheck
         run: |
-          echo "🌿 Verificando variáveis de ambiente (.env.local)..."
+          echo "🌍 Verificando variáveis de ambiente..."
           if [ -f .env.local ]; then
             echo "✅ Arquivo .env.local encontrado."
-            cat .env.local | grep "=" | awk -F= '{print "🔸 " $1}' || echo "⚠️ Nenhuma variável encontrada"
           else
-            echo "🚫 Arquivo .env.local não encontrado!"
+            echo "⚠️ Nenhum arquivo .env.local encontrado!"
           fi
 
-      - name: 📊 Gerar relatório
-        id: relatorio
+      - name: 🧩 Gerar relatório
+        id: report
         run: |
-          echo "🧠 Relatório de Diagnóstico do Narrativas-Chronoscribe" > diagnostico.md
-          echo "Data: $(date)" >> diagnostico.md
+          echo "📊 Gerando relatório de diagnóstico..."
+          echo "## 🧠 Diagnóstico do Narrativas-Chronoscribe" > diagnostico.md
+          echo "- Data: $(date)" >> diagnostico.md
+          echo "- Branch: $GITHUB_REF_NAME" >> diagnostico.md
+          echo "- Commit: $GITHUB_SHA" >> diagnostico.md
           echo "" >> diagnostico.md
-          echo "### 🔹 Dependências:" >> diagnostico.md
-          npm list --depth=0 || echo "Erro ao listar dependências" >> diagnostico.md
+          echo "### Logs principais:" >> diagnostico.md
           echo "" >> diagnostico.md
-          echo "### 🔹 Verificação de ambiente:" >> diagnostico.md
-          if [ -f .env.local ]; then
-            echo "✅ Arquivo .env.local presente." >> diagnostico.md
-          else
-            echo "⚠️ Arquivo .env.local ausente!" >> diagnostico.md
-          fi
+          echo "#### Dependências" >> diagnostico.md
+          echo "$(npm list --depth=0 2>/dev/null || echo 'Não foi possível listar dependências.')" >> diagnostico.md
           echo "" >> diagnostico.md
-          echo "### 🔹 Teste de Build:" >> diagnostico.md
-          if npm run build; then
-            echo "✅ Build concluído com sucesso." >> diagnostico.md
-          else
-            echo "❌ Erro durante o build. Veja os logs acima." >> diagnostico.md
-          fi
+          echo "#### Ambiente" >> diagnostico.md
+          echo "$(ls -1 .env* 2>/dev/null || echo 'Nenhum arquivo .env encontrado.')" >> diagnostico.md
 
       - name: 🪶 Criar Issue automática
         if: always()
@@ -92,8 +90,5 @@ jobs:
           labels: |
             autodiagnostico
             sistema
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: ✅ Conclusão
-        run: echo "🧩 AutoDiagnóstico Pro finalizado com sucesso!"
+          token: ${{ secrets.GH_PERSONAL_TOKEN }}
 
