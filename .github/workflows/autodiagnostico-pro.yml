@@ -1,0 +1,99 @@
+name: 🧠 AutoDiagnóstico Pro do Narrativas-Chronoscribe
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # Executa diariamente às 10h UTC
+  workflow_dispatch:
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔄 Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 📦 Instalar dependências
+        id: install
+        run: |
+          echo "🔍 Verificando dependências..."
+          if [ -f package.json ]; then
+            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação de dependências"
+          else
+            echo "🚫 Nenhum package.json encontrado!"
+          fi
+
+      - name: 🧪 Testar scripts principais
+        id: scripts
+        run: |
+          echo "🧩 Verificando scripts..."
+          if grep -q "\"build\"" package.json; then
+            echo "✅ Script de build encontrado."
+          else
+            echo "⚠️ Script de build não encontrado no package.json"
+          fi
+          if grep -q "\"start\"" package.json; then
+            echo "✅ Script de start encontrado."
+          else
+            echo "⚠️ Script de start não encontrado no package.json"
+          fi
+
+      - name: 🧱 Testar build
+        id: build
+        run: |
+          echo "🏗️ Testando build..."
+          npm run build || echo "❌ Erro ao executar o build."
+
+      - name: 🔍 Verificar variáveis de ambiente
+        id: envcheck
+        run: |
+          echo "🌿 Verificando variáveis de ambiente (.env.local)..."
+          if [ -f .env.local ]; then
+            echo "✅ Arquivo .env.local encontrado."
+            cat .env.local | grep "=" | awk -F= '{print "🔸 " $1}' || echo "⚠️ Nenhuma variável encontrada"
+          else
+            echo "🚫 Arquivo .env.local não encontrado!"
+          fi
+
+      - name: 📊 Gerar relatório
+        id: relatorio
+        run: |
+          echo "🧠 Relatório de Diagnóstico do Narrativas-Chronoscribe" > diagnostico.md
+          echo "Data: $(date)" >> diagnostico.md
+          echo "" >> diagnostico.md
+          echo "### 🔹 Dependências:" >> diagnostico.md
+          npm list --depth=0 || echo "Erro ao listar dependências" >> diagnostico.md
+          echo "" >> diagnostico.md
+          echo "### 🔹 Verificação de ambiente:" >> diagnostico.md
+          if [ -f .env.local ]; then
+            echo "✅ Arquivo .env.local presente." >> diagnostico.md
+          else
+            echo "⚠️ Arquivo .env.local ausente!" >> diagnostico.md
+          fi
+          echo "" >> diagnostico.md
+          echo "### 🔹 Teste de Build:" >> diagnostico.md
+          if npm run build; then
+            echo "✅ Build concluído com sucesso." >> diagnostico.md
+          else
+            echo "❌ Erro durante o build. Veja os logs acima." >> diagnostico.md
+          fi
+
+      - name: 🪶 Criar Issue automática
+        if: always()
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          title: "📋 Diagnóstico Automático - ${{ github.run_id }}"
+          content-filepath: diagnostico.md
+          labels: |
+            autodiagnostico
+            sistema
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ✅ Conclusão
+        run: echo "🧩 AutoDiagnóstico Pro finalizado com sucesso!"
+
