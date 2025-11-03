@@ -1,0 +1,30 @@
+name: 🧠 Diagnóstico Automático do Projeto
+description: O agente fará uma varredura completa para descobrir por que o Narrativas-Chronoscribe não está gerando conteúdo.
+title: "[AutoDiagnóstico] Analisar o projeto e corrigir falhas de geração"
+labels: ["auto", "diagnostico", "agente"]
+assignees:
+  - github-copilot
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧠 Diagnóstico Automático do Narrativas-Chronoscribe
+        Este chamado acionará o agente configurado em `.github/agents/my-agent.md`.
+        Ele tentará descobrir:
+        - Por que o app **não está gerando conteúdo**.
+        - Quais erros estão impedindo o funcionamento.
+        - E fará **correções automáticas**, quando possível.
+
+        ---
+        🧩 **O que você precisa fazer:**  
+        Basta criar esta issue e esperar o agente agir.  
+        Ele abrirá PRs ou comentários explicando o que encontrou.
+
+  - type: checkboxes
+    id: confirmacao
+    attributes:
+      label: Confirmação
+      options:
+        - label: "Concordo em permitir que o agente faça alterações automáticas e crie PRs no repositório"
+          required: true
+
