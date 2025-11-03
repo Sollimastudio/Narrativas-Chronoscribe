@@ -1,0 +1,31 @@
+name: 🤖 AutoDiagnóstico Diário do Narrativas-Chronoscribe
+
+on:
+  schedule:
+    - cron: "0 10 * * *"  # Executa todo dia às 10h da manhã (horário UTC)
+  workflow_dispatch:      # Permite rodar manualmente também
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔄 Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: 🧠 Ativar agente de diagnóstico
+        uses: github/copilot-actions@v1
+        with:
+          agent-file: ".github/agents/my-agent.md"
+          run-mode: "analyze"
+          instructions: |
+            Analise o repositório Narrativas-Chronoscribe e:
+            - Verifique se o app está conseguindo gerar conteúdo.
+            - Detecte falhas de build, erros de dependência, APIs quebradas ou falta de chaves.
+            - Crie uma issue com o resumo em português se encontrar problemas.
+            - Se tudo estiver ok, poste um comentário automático confirmando.
+
+      - name: 📬 Notificar resultado
+        if: always()
+        run: |
+          echo "✅ Diagnóstico diário executado. Veja as issues para detalhes."
+
