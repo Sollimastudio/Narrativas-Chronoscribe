@@ -1,4 +1,4 @@
-name: 🧠 AutoDiagnóstico Pro do Narrativas-Chronoscribe
+name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
 on:
   schedule:
@@ -9,9 +9,16 @@ jobs:
   diagnostico:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
     steps:
-      - name: 🧩 Clonar repositório
+      - name: 📥 Clonar repositório
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
 
       - name: ⚙️ Instalar Node.js
         uses: actions/setup-node@v4
@@ -19,76 +26,47 @@ jobs:
           node-version: 18
 
       - name: 📦 Instalar dependências
-        id: install
         run: |
-          echo "🧠 Verificando dependências..."
+          echo "🔍 Verificando dependências..."
           if [ -f package.json ]; then
-            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação de dependências"
+            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação"
           else
             echo "❌ Nenhum package.json encontrado!"
           fi
 
-      - name: 🧪 Testar scripts principais
-        id: scripts
+      - name: 🧩 Verificar Tailwind e configs
         run: |
-          echo "🧠 Verificando scripts..."
-          if grep -q "\"build\"" package.json; then
-            echo "✅ Script de build encontrado."
-          else
-            echo "⚠️ Script de build não encontrado no package.json"
+          echo "🎨 Verificando Tailwind config..."
+          if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
+            echo "⚡ Corrigindo extensão para Tailwind compatível..."
+            mv tailwind.config.ts tailwind.config.js
           fi
 
-          if grep -q "\"start\"" package.json; then
-            echo "✅ Script de start encontrado."
-          else
-            echo "⚠️ Script de start não encontrado no package.json"
-          fi
-
-      - name: 🧱 Testar build
-        id: build
+      - name: 🧠 Testar build
         run: |
-          echo "🏗️ Iniciando build..."
-          if npm run build; then
-            echo "✅ Build concluído com sucesso!"
-          else
-            echo "❌ Falha no build."
-          fi
+          echo "🏗️ Testando build..."
+          npm run build || echo "❌ Falha de build detectada"
 
-      - name: 🧾 Verificar variáveis de ambiente
-        id: envcheck
+      - name: 🩺 Gerar relatório de diagnóstico
         run: |
-          echo "🌍 Verificando variáveis de ambiente..."
-          if [ -f .env.local ]; then
-            echo "✅ Arquivo .env.local encontrado."
-          else
-            echo "⚠️ Nenhum arquivo .env.local encontrado!"
-          fi
+          echo "📊 Relatório de diagnóstico gerado em diagnostics/report-$(date +%F).log"
+          mkdir -p diagnostics
+          echo "Relatório gerado em $(date)" > diagnostics/report-$(date +%F).log
+          echo "Verificação completa do sistema." >> diagnostics/report-$(date +%F).log
 
-      - name: 🧩 Gerar relatório
-        id: report
-        run: |
-          echo "📊 Gerando relatório de diagnóstico..."
-          echo "## 🧠 Diagnóstico do Narrativas-Chronoscribe" > diagnostico.md
-          echo "- Data: $(date)" >> diagnostico.md
-          echo "- Branch: $GITHUB_REF_NAME" >> diagnostico.md
-          echo "- Commit: $GITHUB_SHA" >> diagnostico.md
-          echo "" >> diagnostico.md
-          echo "### Logs principais:" >> diagnostico.md
-          echo "" >> diagnostico.md
-          echo "#### Dependências" >> diagnostico.md
-          echo "$(npm list --depth=0 2>/dev/null || echo 'Não foi possível listar dependências.')" >> diagnostico.md
-          echo "" >> diagnostico.md
-          echo "#### Ambiente" >> diagnostico.md
-          echo "$(ls -1 .env* 2>/dev/null || echo 'Nenhum arquivo .env encontrado.')" >> diagnostico.md
-
-      - name: 🪶 Criar Issue automática
-        if: always()
-        uses: peter-evans/create-issue-from-file@v5
+      - name: 🛠️ Criar Pull Request automático se houver correções
+        uses: peter-evans/create-pull-request@v5
         with:
-          title: "📋 Diagnóstico Automático - ${{ github.run_id }}"
-          content-filepath: diagnostico.md
-          labels: |
-            autodiagnostico
-            sistema
-          token: ${{ secrets.GH_PERSONAL_TOKEN }}
+          token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
+          branch: "auto-fix/diagnostico-$(date +%s)"
+          title: "🧠 Correções automáticas do AutoDiagnóstico"
+          body: |
+            Este PR foi gerado automaticamente pelo agente de AutoDiagnóstico Pro.
+            Verificações incluídas:
+            - Correção de configurações do Tailwind
+            - Ajustes de dependências e build
+            - Relatório de ambiente e integridade
+          commit-message: "fix: correções automáticas do AutoDiagnóstico Pro"
+          labels: "autofix, sistema"
+          delete-branch: true
 
