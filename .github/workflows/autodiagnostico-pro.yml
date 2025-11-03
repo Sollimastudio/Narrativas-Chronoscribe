@@ -1,9 +1,9 @@
 name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
 on:
+  workflow_dispatch: # 🔹 Permite executar manualmente via botão "Run workflow"
   schedule:
-    - cron: "0 10 * * *" # Executa diariamente às 10h UTC
-  workflow_dispatch:
+    - cron: "0 10 * * *" # 🔹 Executa automaticamente todo dia às 10h UTC
 
 jobs:
   diagnostico:
@@ -29,16 +29,16 @@ jobs:
         run: |
           echo "🔍 Verificando dependências..."
           if [ -f package.json ]; then
-            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação"
+            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação de dependências"
           else
             echo "❌ Nenhum package.json encontrado!"
           fi
 
-      - name: 🧩 Verificar Tailwind e configs
+      - name: 🎨 Verificar Tailwind config
         run: |
           echo "🎨 Verificando Tailwind config..."
           if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
-            echo "⚡ Corrigindo extensão para Tailwind compatível..."
+            echo "⚡ Corrigindo extensão do Tailwind para compatibilidade..."
             mv tailwind.config.ts tailwind.config.js
           fi
 
@@ -49,24 +49,30 @@ jobs:
 
       - name: 🩺 Gerar relatório de diagnóstico
         run: |
-          echo "📊 Relatório de diagnóstico gerado em diagnostics/report-$(date +%F).log"
+          echo "📊 Gerando relatório de diagnóstico..."
           mkdir -p diagnostics
           echo "Relatório gerado em $(date)" > diagnostics/report-$(date +%F).log
-          echo "Verificação completa do sistema." >> diagnostics/report-$(date +%F).log
+          echo "Verificações do ambiente:" >> diagnostics/report-$(date +%F).log
+          node -v >> diagnostics/report-$(date +%F).log
+          npm -v >> diagnostics/report-$(date +%F).log
+          echo "✅ Diagnóstico concluído com sucesso." >> diagnostics/report-$(date +%F).log
 
       - name: 🛠️ Criar Pull Request automático se houver correções
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
           branch: "auto-fix/diagnostico-$(date +%s)"
-          title: "🧠 Correções automáticas do AutoDiagnóstico"
+          title: "🧠 Correções automáticas do AutoDiagnóstico Pro"
           body: |
             Este PR foi gerado automaticamente pelo agente de AutoDiagnóstico Pro.
             Verificações incluídas:
             - Correção de configurações do Tailwind
             - Ajustes de dependências e build
-            - Relatório de ambiente e integridade
+            - Relatório de integridade do sistema
           commit-message: "fix: correções automáticas do AutoDiagnóstico Pro"
           labels: "autofix, sistema"
           delete-branch: true
+
+      - name: ✅ Conclusão
+        run: echo "✅ AutoDiagnóstico Pro concluído com sucesso!"
 
