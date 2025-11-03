@@ -20,44 +20,40 @@ for (const file of POSSIBLE_ENV_FILES) {
   }
 }
 
-const REQUIRED_VARS = [
-  "GOOGLE_CLOUD_PROJECT",
-  "GOOGLE_CLOUD_LOCATION",
-  "GEMINI_MODEL",
-  "AUTH_SECRET",
-  "DATABASE_URL",
-];
+const isProd = process.env.NODE_ENV === "production";
 
-const OPTIONAL_AT_LEAST_ONE = [
-  ["GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_APPLICATION_CREDENTIALS_BASE64"],
-];
-
-const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
-
-const placeholderDb =
-  process.env.DATABASE_URL &&
-  /USER:PASSWORD@HOST/i.test(process.env.DATABASE_URL);
-
-const optionalMissing = OPTIONAL_AT_LEAST_ONE.filter(
-  (group) => !group.some((key) => process.env[key])
+// Regras alinhadas com src/config/env.ts
+const missingAuth = !(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET);
+const missingOpenAI = !process.env.OPENAI_API_KEY;
+const missingNextAuthUrl = !process.env.NEXTAUTH_URL;
+const missingDb = !process.env.DATABASE_URL; // em dev, default sqlite cobre
+const missingGcs = !(
+  process.env.GOOGLE_CLOUD_PROJECT && process.env.GOOGLE_STORAGE_BUCKET
 );
 
-if (missing.length || optionalMissing.length || placeholderDb) {
-  console.error("❌ Variáveis de ambiente ausentes:");
-  if (missing.length) {
-    console.error("  Obrigatórias:", missing.join(", "));
-  }
-  if (optionalMissing.length) {
-    for (const group of optionalMissing) {
-      console.error(`  Pelo menos uma deve estar definida: ${group.join(" / ")}`);
-    }
-  }
-  if (placeholderDb) {
-    console.error(
-      "  DATABASE_URL parece estar com valores padrão (USER:PASSWORD@HOST). Atualize com sua string real."
-    );
-  }
+const hardMissing = [];
+if (missingAuth) hardMissing.push("AUTH_SECRET/NEXTAUTH_SECRET");
+if (missingOpenAI) hardMissing.push("OPENAI_API_KEY");
+if (missingNextAuthUrl) hardMissing.push("NEXTAUTH_URL");
+if (isProd && missingDb) hardMissing.push("DATABASE_URL");
+if (isProd && missingGcs) hardMissing.push("GOOGLE_CLOUD_PROJECT/GOOGLE_STORAGE_BUCKET");
+
+if (hardMissing.length) {
+  console.error("❌ Variáveis obrigatórias ausentes:");
+  console.error("  ", hardMissing.join(", "));
   process.exit(1);
 }
 
-console.log("✅ Variáveis de ambiente principais encontradas.");
+// Avisos não bloqueantes em dev
+if (!isProd) {
+  const warnings = [];
+  if (missingDb) warnings.push("DATABASE_URL ausente (usando default sqlite)");
+  if (missingGcs)
+    warnings.push("Google Cloud Storage incompleto (upload cairá no fallback local se falhar)");
+  if (warnings.length) {
+    console.warn("⚠️  Avisos:");
+    for (const w of warnings) console.warn("  -", w);
+  }
+}
+
+console.log("✅ Variáveis principais ok.");

@@ -1,0 +1,51 @@
+
+> narrativas-chronoscribe@1.0.0 build
+> next build
+
+   Creating an optimized production build ...
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/22) ...
+   Generating static pages (5/22) 
+   Generating static pages (10/22) 
+   Generating static pages (16/22) 
+ ✓ Generating static pages (22/22) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    628 B           130 kB
+├ ○ /_not-found                          882 B          81.3 kB
+├ λ /api/analytics                       0 B                0 B
+├ λ /api/auth/[...nextauth]              0 B                0 B
+├ λ /api/auth/register                   0 B                0 B
+├ λ /api/ingest                          0 B                0 B
+├ λ /api/narratives                      0 B                0 B
+├ λ /api/narratives/export               0 B                0 B
+├ λ /api/narratives/generate             0 B                0 B
+├ λ /api/rate-limit                      0 B                0 B
+├ λ /api/share                           0 B                0 B
+├ λ /api/storage                         0 B                0 B
+├ λ /api/upload                          0 B                0 B
+├ λ /api/usage                           0 B                0 B
+├ ○ /arquiteto                           8.52 kB         130 kB
+├ ○ /dashboard                           7.77 kB         140 kB
+├ ○ /icon.svg                            0 B                0 B
+├ ○ /landing                             1.36 kB        99.6 kB
+├ ○ /login                               2.76 kB         101 kB
+├ λ /narrativas                          5.99 kB        86.4 kB
+├ ○ /narrativas/biografico               21.4 kB         143 kB
+├ ○ /register                            3.29 kB         102 kB
+└ λ /share/[id]                          381 B          80.8 kB
++ First Load JS shared by all            80.4 kB
+  ├ chunks/472-5f43121744e9718c.js       27.5 kB
+  ├ chunks/fd9d1056-09b6bf37e4595a29.js  50.9 kB
+  ├ chunks/main-app-ab087f49f714dfe7.js  232 B
+  └ chunks/webpack-ae56e8f849325c2c.js   1.79 kB
+
+
+ƒ Middleware                             25.4 kB
+
+λ  (Server)  server-side renders at runtime (uses getInitialProps or getServerSideProps)
+○  (Static)  automatically rendered as static HTML (uses no initial props)
+

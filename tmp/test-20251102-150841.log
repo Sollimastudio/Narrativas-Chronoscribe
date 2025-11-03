@@ -1,0 +1,15 @@
+
+> narrativas-chronoscribe@1.0.0 test
+> npx tsc --project tsconfig.test.json --pretty false && node --test dist-test/tests/unit/narrative-schema.test.js && rm -rf dist-test
+
+[32m✔ validateBlueprint aprova estrutura mínima válida [90m(0.623917ms)[39m[39m
+[32m✔ validateBlueprint aponta campos obrigatórios ausentes [90m(0.142208ms)[39m[39m
+[32m✔ validateGenerationContext exige blueprint coerente [90m(0.208542ms)[39m[39m
+[34mℹ tests 3[39m
+[34mℹ suites 0[39m
+[34mℹ pass 3[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 43.756958[39m

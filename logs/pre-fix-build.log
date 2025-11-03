@@ -1,0 +1,13 @@
+
+> narrativas-chronoscribe@1.0.0 dev
+> next dev -p 3100
+
+  ▲ Next.js 13.5.6
+  - Local:        http://localhost:3100
+  - Environments: .env.local, .env
+
+ ✓ Ready in 1686ms
+ ✓ Compiled /src/middleware in 250ms (55 modules)
+ ✓ Compiled /dashboard/page in 1850ms (1341 modules)
+ ✓ Compiled /icon.svg/route in 514ms (915 modules)
+ ✓ Compiled (942 modules)

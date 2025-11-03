@@ -1,0 +1,14 @@
+
+> narrativas-chronoscribe@1.0.0 test
+> npx tsc --project tsconfig.test.json --pretty false && node --test dist-test/tests/unit/narrative-schema.test.js && rm -rf dist-test
+
+tests/integration/strategic-analyzer.test.ts(2,28): error TS2307: Cannot find module '../server/analysis/apis/semrush' or its corresponding type declarations.
+tests/integration/strategic-analyzer.test.ts(3,33): error TS2307: Cannot find module '../server/analysis/apis/google-trends' or its corresponding type declarations.
+tests/integration/strategic-analyzer.test.ts(4,35): error TS2307: Cannot find module '../server/ai/strategic-analyzer' or its corresponding type declarations.
+tests/integration/strategic-analyzer.test.ts(5,32): error TS2307: Cannot find module '../server/ai/openai-provider' or its corresponding type declarations.
+tests/integration/strategic-analyzer.test.ts(61,42): error TS2304: Cannot find name 'mockContent'.
+tests/integration/strategic-analyzer.test.ts(61,55): error TS2304: Cannot find name 'mockFormat'.
+tests/integration/strategic-analyzer.test.ts(68,50): error TS2304: Cannot find name 'mockContent'.
+tests/integration/strategic-analyzer.test.ts(68,63): error TS2304: Cannot find name 'mockFormat'.
+tests/integration/strategic-analyzer.test.ts(76,35): error TS2304: Cannot find name 'mockContent'.
+tests/integration/strategic-analyzer.test.ts(76,48): error TS2304: Cannot find name 'mockFormat'.

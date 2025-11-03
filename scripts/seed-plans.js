@@ -12,7 +12,7 @@ const DEFAULT_PLANS = [
     description:
       "Ideal para experimentar o Arquiteto. Limite diário e mensal controlados.",
     dailyGenerationsLimit: 5,
-    monthlyGenerationsLimit: 100,
+    monthlyGenerationsLimit: 60,
     priceCents: 0,
     currency: "USD",
   },
@@ -22,7 +22,7 @@ const DEFAULT_PLANS = [
     description:
       "Pacote recomendado para criadores consistentes. Libera mais execuções por dia e suporte prioritário.",
     dailyGenerationsLimit: 25,
-    monthlyGenerationsLimit: 600,
+    monthlyGenerationsLimit: 400,
     priceCents: 4900,
     currency: "USD",
   },
@@ -32,7 +32,7 @@ const DEFAULT_PLANS = [
     description:
       "Para equipes e lançamentos em larga escala. Limites amplos e espaço para experimentação.",
     dailyGenerationsLimit: 100,
-    monthlyGenerationsLimit: 2500,
+    monthlyGenerationsLimit: 2000,
     priceCents: 14900,
     currency: "USD",
   },
@@ -59,6 +59,7 @@ async function main() {
         monthlyGenerationsLimit: plan.monthlyGenerationsLimit,
         priceCents: plan.priceCents,
         currency: plan.currency,
+        isActive: true,
       },
     });
   }

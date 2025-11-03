@@ -1,0 +1,12 @@
+export default function HomePage() {
+  return (
+    <main className="p-8 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Bem-vindo ao Narrativas Chronoscribe</h1>
+      <p>
+        Use o menu para acessar o Arquiteto de Narrativas, ou vá para
+        <strong> /login </strong> ou <strong>/register</strong> para entrar ou criar uma conta.
+      </p>
+    </main>
+  )
+}
+

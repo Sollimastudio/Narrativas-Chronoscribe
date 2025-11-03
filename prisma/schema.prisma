@@ -3,62 +3,47 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  TRIALING
-  PAST_DUE
-  CANCELED
-}
-
-enum UsageType {
-  TEXT_GENERATION
-  IMAGE_GENERATION
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
-  id            String          @id @default(cuid())
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
-  email         String?         @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  accounts      Account[]
+  passwordHash  String
+  createdAt     DateTime  @default(now())
   sessions      Session[]
+  accounts      Account[]
   subscriptions Subscription[]
   usageLogs     UsageLog[]
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  projects      Project[]
 }
 
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
-  expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
 }
 
 model VerificationToken {
@@ -70,45 +55,59 @@ model VerificationToken {
 }
 
 model Plan {
-  id                      String          @id @default(cuid())
-  slug                    String          @unique
-  name                    String
-  description             String?
-  currency                String          @default("USD")
-  priceCents              Int?            @default(0)
-  dailyGenerationsLimit   Int?
-  monthlyGenerationsLimit Int?
-  isActive                Boolean         @default(true)
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  subscriptions           Subscription[]
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  priceCents  Int      @default(0)
+  currency    String   @default("USD")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions Subscription[]
 }
 
 model Subscription {
-  id               String              @id @default(cuid())
-  userId           String              @unique
-  planId           String
-  status           SubscriptionStatus  @default(ACTIVE)
-  startedAt        DateTime            @default(now())
-  currentPeriodEnd DateTime?
-  cancelAt         DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id])
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
 }
 
 model UsageLog {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
-  type      UsageType @default(TEXT_GENERATION)
-  createdAt DateTime  @default(now())
-  promptId  String?
-  meta      Json?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([userId, type, createdAt])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  promptId  String
+  createdAt DateTime @default(now())
 }
+
+model ContentShare {
+  id        String   @id
+  content   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  format      String
+  status      String   @default("draft")
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+

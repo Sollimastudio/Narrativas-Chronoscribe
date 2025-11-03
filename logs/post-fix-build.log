@@ -1,0 +1,37 @@
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+./node_modules/ejs/lib/ejs.js
+require.extensions is not supported by webpack. Use a loader instead.
+
+Import trace for requested module:
+./node_modules/ejs/lib/ejs.js
+./node_modules/epub-gen/lib/index.js
+./node_modules/epub-gen/index.js
+./src/server/export/generators.ts
+./src/app/api/narratives/export/route.ts
+
+./node_modules/ejs/lib/ejs.js
+require.extensions is not supported by webpack. Use a loader instead.
+
+Import trace for requested module:
+./node_modules/ejs/lib/ejs.js
+./node_modules/epub-gen/lib/index.js
+./node_modules/epub-gen/index.js
+./src/server/export/generators.ts
+./src/app/api/narratives/export/route.ts
+
+   Linting and checking validity of types ...
+Failed to compile.
+
+./src/components/workflow/WorkflowNavigator.tsx:87:13
+Type error: Type '{ format: any; style: any; analysis: any; onContentGenerated: (content: any) => void; }' is not assignable to type 'IntrinsicAttributes'.
+  Property 'format' does not exist on type 'IntrinsicAttributes'.
+
+[0m [90m 85 | [39m        [36mreturn[39m ([0m
+[0m [90m 86 | [39m          [33m<[39m[33mContentCreator[39m [0m
+[0m[31m[1m>[22m[39m[90m 87 | [39m            format[33m=[39m{state[33m.[39mdados[33m.[39mformato [33m||[39m [32m''[39m} [0m
+[0m [90m    | [39m            [31m[1m^[22m[39m[0m
+[0m [90m 88 | [39m            style[33m=[39m{state[33m.[39mdados[33m.[39mestilo [33m||[39m [32m''[39m} [0m
+[0m [90m 89 | [39m            analysis[33m=[39m{state[33m.[39mdados[33m.[39manalise [33m||[39m {} [36mas[39m any}[0m
+[0m [90m 90 | [39m            onContentGenerated[33m=[39m{(content) [33m=>[39m {[0m

@@ -1,0 +1,21 @@
+{
+  "id": "mock-l5-001",
+  "createdAt": "2025-10-28T12:00:00Z",
+  "promptTokens": 500,
+  "completionTokens": 1500,
+  "title": "A Jornada Chronoscribe: Arquitetando a Venda Visceral",
+  "content": "## Introdução: O Preço da Ignorância\n\nTodo empreendedor deseja vender, mas poucos dominam a arte de ser impossível de ser ignorado. A narrativa aqui não é sobre produtos; é sobre a ressignificação da dor do cliente. O tom visionário, baseado na sua voz de marca, estabelece uma ponte inquebrável entre o potencial e a ação. O estilo visual que estudamos, centrado no Alto Contraste e na paleta Dourado/Preto, amplifica a metáfora do ouro que o cliente está perdendo ao não se engajar.\n\n## Seção 1: O Vazio da Metodologia Antiga\n\nNesta seção, atacamos o modelo de comunicação falho. A 'tensão' é construída ao detalhar o que o público-alvo tem feito de errado. É um confronto direto, mas com um respiro de esperança que direciona para a nossa solução. A cronologia dos fatos estudada nos seus PDFs sobre 'crises de conversão' é usada para dar peso de autoridade.\n\n## Conclusão: O Imperativo da Ação\n\nNós arquitetamos a dor, oferecemos o antídoto e agora exigimos a transformação. O Call to Action final não é um pedido; é um imperativo: 'Não apenas construa uma marca. Arquiteture um legado com o Chronoscribe.'",
+  "promptImagem": "Ultra-realistic cinematic photograph, golden pocket watch melting into sand on a high-contrast black table, dramatic chiaroscuro lighting, subtle dust particles in the air, deep visceral emotion, Pallete: Black, Gold, Beige. Metaphor: The fleeting nature of uncaptured time.",
+  "promptCarrossel": [
+    "Slide 1: Close-up extremo de um olho humano refletindo uma única chama dourada. Alto contraste. Visceral.",
+    "Slide 2: Mãos entrelaçadas segurando um fragmento de papel antigo com escrita em ouro, o papel rasga em um lado. Paleta preta e bege.",
+    "Slide 3: Diagrama futurista e minimalista em linhas douradas sobre um fundo preto, ilustrando 'Tensão -> Ação -> Legado'.",
+    "Slide 4: Silhueta de um arquiteto olhando para um horizonte dourado, nevoeiro pesado no primeiro plano. Sentimento de dominação e planejamento.",
+    "Slide 5: O texto 'IMPOSSÍVEL DE SER IGNORADO' em tipografia serifada dourada, flutuando sobre uma superfície de água preta.",
+    "Slide 6: Logo da sua marca sutilmente integrado em um relevo dourado. Ação final: 'Arquitete Seu Legado Agora'."
+  ],
+  "analisePreditiva": {
+    "sugestoesCriticas": "A narrativa está forte, mas a seção 'Vazio da Metodologia Antiga' pode ser muito confrontadora. Sugiro usar uma metáfora de 'ponte' ao invés de 'confronto' para o público mais sensível. Mantenha o tom de autoridade, mas suavize a entrega da crítica.",
+    "sugestoesViralizacao": "Para maximizar o engajamento MIL no carrossel, a primeira imagem (o olho) deve ter um CTA no texto da publicação sugerindo uma 'Pergunta Existencial' ('Você está perdendo ouro?'). Use o áudio 'Epic Cinematic Trailer' de Hans Zimmer (Versão Clean) como fundo para o vídeo/story."
+  }
+}

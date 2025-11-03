@@ -21,17 +21,13 @@ function ensureEnvFile() {
 
   const template = [
     "# === Variáveis básicas ===",
-    "GOOGLE_CLOUD_PROJECT=",
-    "GOOGLE_CLOUD_LOCATION=us-central1",
-    "GEMINI_MODEL=gemini-1.5-pro",
+    "OPENAI_API_KEY=",
+    "OPENAI_MODEL=gpt-4o-mini",
+    "# OPENAI_BASE_URL=https://api.openai.com/v1",
     "",
     "# Será preenchido automaticamente se vazio",
     "AUTH_SECRET=",
     'DATABASE_URL="file:./prisma/dev.db"',
-    "",
-    "# Informe um destes",
-    "# GOOGLE_APPLICATION_CREDENTIALS=/caminho/para/arquivo.json",
-    "# GOOGLE_APPLICATION_CREDENTIALS_BASE64=",
     "",
   ].join("\n");
 
@@ -93,13 +89,9 @@ function ensureDatabaseUrl(env) {
 function prismaSync(env) {
   const dbUrl = (env.DATABASE_URL || '"file:./prisma/dev.db"').replace(/^"|"$/g, "");
 
-  if (
-    dbUrl.startsWith("file:") ||
-    dbUrl.includes("USER:PASSWORD@HOST") ||
-    dbUrl.includes("DATABASE?schema")
-  ) {
+  if (dbUrl.includes("USER:PASSWORD@HOST")) {
     console.log(
-      "• DATABASE_URL não aponta para um Postgres válido. Pule o prisma db push automático."
+      "• DATABASE_URL parece placeholder. Pule o prisma db push automático."
     );
     return;
   }

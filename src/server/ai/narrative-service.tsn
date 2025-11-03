@@ -1,0 +1,24 @@
+import {
+  GeneratedNarrative,
+  NarrativeGenerationContext,
+} from "@/domain/narratives/blueprint";
+import {
+  buildSystemPrompt,
+  buildUserPrompt,
+} from "@/domain/narratives/strategy";
+import { OpenAINarrativeProvider } from "@/server/ai/openai-provider";
+
+export class NarrativeService {
+  constructor(
+    private readonly provider = new OpenAINarrativeProvider()
+  ) {}
+
+  async generateNarrative(
+    context: NarrativeGenerationContext
+  ): Promise<GeneratedNarrative> {
+    const systemPrompt = buildSystemPrompt(context);
+    const userPrompt = buildUserPrompt(context);
+
+    return this.provider.generate({ systemPrompt, userPrompt });
+  }
+}
