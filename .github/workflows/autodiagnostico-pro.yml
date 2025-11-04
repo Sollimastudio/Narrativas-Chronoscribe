@@ -23,37 +23,56 @@ jobs:
         run: |
           echo "🔍 Verificando dependências..."
           if [ -f package.json ]; then
-            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação, tentando correção..."
+            npm install --legacy-peer-deps || echo "⚠️ Erro na instalação, tentando correção..."
             npm audit fix --force || true
           else
             echo "❌ Nenhum package.json encontrado!"
           fi
 
-      - name: 🧪 Testar build e layout
+      - name: 🧱 Testar build do Next.js
         id: build
         run: |
           echo "🧱 Testando build..."
           if npm run build --if-present; then
-            echo "✅ Build bem-sucedido."
+            echo "✅ Build ok!"
           else
-            echo "⚠️ Build falhou, tentando correção automática de Tailwind e dependências..."
+            echo "⚠️ Build falhou, aplicando correções automáticas..."
             npx tailwindcss init -p || true
             npm install tailwindcss postcss autoprefixer --save-dev || true
             npm run build --if-present || true
           fi
 
-      - name: 🎨 Verificar estilos e alinhamento
-        id: ui
+      - name: 🎨 Verificar e corrigir Tailwind
+        id: tailwind
         run: |
-          echo "🎨 Verificando inconsistências de Tailwind..."
-          if [ -d src/styles ] || [ -f tailwind.config.ts ]; then
-            echo "✅ Configuração de estilos detectada."
-          else
-            echo "⚙️ Restaurando Tailwind padrão..."
+          echo "🎨 Verificando Tailwind e estilos..."
+          if [ ! -f tailwind.config.ts ] && [ ! -f tailwind.config.js ]; then
+            echo "⚙️ Gerando nova configuração Tailwind..."
             npx tailwindcss init -p
           fi
+          echo "✅ Tailwind verificado."
 
-      - name: 🧠 Criar Issue com relatório
+      - name: 🧭 Testar layout visual (Puppeteer)
+        id: visual
+        run: |
+          echo "🧭 Iniciando teste visual com Puppeteer..."
+          npm install puppeteer --save-dev || true
+          nohup npm run dev > /dev/null 2>&1 &
+          sleep 10
+          node -e "
+          const puppeteer = require('puppeteer');
+          (async () => {
+            const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox']});
+            const page = await browser.newPage();
+            await page.goto('http://localhost:3100', {waitUntil: 'domcontentloaded'});
+            await page.screenshot({path: 'layout-check.png'});
+            console.log('🖼️ Screenshot capturada com sucesso!');
+            await browser.close();
+          })();
+          "
+          echo "✅ Verificação visual concluída."
+
+      - name: 🧠 Criar Issue com relatório (se falhou)
         if: failure()
         uses: peter-evans/create-issue-from-file@v5
         with:
@@ -69,9 +88,8 @@ jobs:
           git config user.email "bot@github.com"
           git add .
           git commit -m "🧩 Correções automáticas aplicadas pelo AutoDiagnóstico Pro" || echo "Nenhuma alteração para commitar."
-          git push || echo "Sem permissões para push direto."
+          git push || echo "⚠️ Sem permissões para push direto."
 
       - name: ✅ Conclusão
         run: echo "🧠 AutoDiagnóstico concluído com verificação e correção automática!"
-
 
