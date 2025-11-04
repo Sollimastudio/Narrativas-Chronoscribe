@@ -12,8 +12,8 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().url().optional(),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
@@ -40,16 +40,15 @@ const envSchema = z.object({
 // Parse variáveis básicas (planas)
 const raw = envSchema.parse(process.env);
 
-// Early gating em variáveis essenciais
+// Early gating em variáveis essenciais - apenas warn em build time
 const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
 const missing = [
   hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
   !raw.DATABASE_URL ? 'DATABASE_URL' : null,
-  !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
-  !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
 ].filter(Boolean) as string[];
-if (missing.length) {
-  throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
+
+if (missing.length && process.env.NODE_ENV !== 'production') {
+  console.warn(`⚠️  Variáveis recomendadas ausentes: ${missing.join(', ')}. Configure seu .env.local para funcionalidade completa.`);
 }
 
 // Objeto de configuração composto usado pelo resto do app
@@ -113,6 +112,15 @@ function normalizePrivateKey(k: string): string {
 
 export function getGoogleCredentials(): GoogleCredentials {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  // Se não há projeto configurado, retornar credenciais vazias
+  if (!expectedProject) {
+    return {
+      project_id: '',
+      client_email: '',
+      private_key: '',
+    };
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;

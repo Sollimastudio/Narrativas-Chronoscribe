@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { RegisterForm } from "@/components/forms/RegisterForm";
 
+export const dynamic = 'force-dynamic';
+
 export default function RegisterPage() {
   const { status } = useSession();
   const router = useRouter();

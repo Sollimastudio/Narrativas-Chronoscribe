@@ -2,9 +2,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Se quiser adicionar opções depois, coloca aqui:
-  // experimental: { serverActions: true },
-  // output: "standalone"
+  output: "standalone",
+  // Disable static generation for problematic routes during build
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
 };
 
 export default nextConfig;

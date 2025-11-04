@@ -5,6 +5,8 @@ import React from "react";
 import Link from "next/link";
 import { LoginForm } from "@/components/forms/LoginForm";
 
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-12 text-slate-100">
