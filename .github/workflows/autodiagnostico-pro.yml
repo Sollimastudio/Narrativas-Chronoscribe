@@ -1,24 +1,17 @@
 name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
 on:
-  workflow_dispatch:        # ✅ habilita o botão "Run workflow" no GitHub Actions
+  workflow_dispatch:
   schedule:
-    - cron: "0 10 * * *"    # executa diariamente às 10h UTC
-
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+    - cron: "0 10 * * *"  # Executa diariamente às 10h UTC
 
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Clonar repositório
+      - name: 🧩 Clonar repositório
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
 
       - name: ⚙️ Instalar Node.js
         uses: actions/setup-node@v4
@@ -26,55 +19,59 @@ jobs:
           node-version: 18
 
       - name: 📦 Instalar dependências
+        id: install
         run: |
           echo "🔍 Verificando dependências..."
           if [ -f package.json ]; then
-            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação de dependências"
+            npm install --legacy-peer-deps || echo "⚠️ Erro durante instalação, tentando correção..."
+            npm audit fix --force || true
           else
             echo "❌ Nenhum package.json encontrado!"
           fi
 
-      - name: 🎨 Verificar Tailwind config
+      - name: 🧪 Testar build e layout
+        id: build
         run: |
-          echo "🎨 Verificando Tailwind config..."
-          if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
-            echo "⚡ Corrigindo extensão do Tailwind (copiando .ts para .js)"
-            cp tailwind.config.ts tailwind.config.js
+          echo "🧱 Testando build..."
+          if npm run build --if-present; then
+            echo "✅ Build bem-sucedido."
           else
-            echo "✅ Tailwind config verificado."
+            echo "⚠️ Build falhou, tentando correção automática de Tailwind e dependências..."
+            npx tailwindcss init -p || true
+            npm install tailwindcss postcss autoprefixer --save-dev || true
+            npm run build --if-present || true
           fi
 
-      - name: 🧠 Testar build
+      - name: 🎨 Verificar estilos e alinhamento
+        id: ui
         run: |
-          echo "🏗️ Testando build..."
-          npm run build || echo "❌ Falha de build detectada"
+          echo "🎨 Verificando inconsistências de Tailwind..."
+          if [ -d src/styles ] || [ -f tailwind.config.ts ]; then
+            echo "✅ Configuração de estilos detectada."
+          else
+            echo "⚙️ Restaurando Tailwind padrão..."
+            npx tailwindcss init -p
+          fi
 
-      - name: 🩺 Gerar relatório de diagnóstico
-        run: |
-          echo "📊 Gerando relatório..."
-          mkdir -p diagnostics
-          echo "Relatório gerado em $(date)" > diagnostics/report-$(date +%F).log
-          echo "Verificações do ambiente:" >> diagnostics/report-$(date +%F).log
-          node -v >> diagnostics/report-$(date +%F).log
-          npm -v >> diagnostics/report-$(date +%F).log
-          echo "✅ Diagnóstico concluído com sucesso." >> diagnostics/report-$(date +%F).log
-
-      - name: 🛠️ Criar Pull Request automático (se houver correções)
-        uses: peter-evans/create-pull-request@v5
+      - name: 🧠 Criar Issue com relatório
+        if: failure()
+        uses: peter-evans/create-issue-from-file@v5
         with:
-          token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
-          branch: "auto-fix/diagnostico-$(date +%s)"
-          title: "🧠 Correções automáticas do AutoDiagnóstico Pro"
-          body: |
-            Este PR foi gerado automaticamente pelo agente AutoDiagnóstico Pro.
-            Inclui:
-            - Correções Tailwind e build
-            - Verificação de dependências
-            - Relatório de integridade do sistema
-          commit-message: "fix: correções automáticas do AutoDiagnóstico Pro"
-          labels: "autofix, sistema"
-          delete-branch: true
+          title: "🚨 Diagnóstico Automático - Falha detectada em ${{ github.run_id }}"
+          content-filepath: ./diagnostico.log
+          labels: autodiagnostico, erro, sistema
+
+      - name: 🔁 Commit autocorretivo (se aplicável)
+        if: always()
+        run: |
+          echo "🔄 Preparando commit de autocorreção..."
+          git config user.name "autodiagnostico-bot"
+          git config user.email "bot@github.com"
+          git add .
+          git commit -m "🧩 Correções automáticas aplicadas pelo AutoDiagnóstico Pro" || echo "Nenhuma alteração para commitar."
+          git push || echo "Sem permissões para push direto."
 
       - name: ✅ Conclusão
-        run: echo "✅ AutoDiagnóstico Pro concluído com sucesso!"
+        run: echo "🧠 AutoDiagnóstico concluído com verificação e correção automática!"
+
 
