@@ -1,18 +1,19 @@
 name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
+# 🔹 Garante execução manual e automática
 on:
-  workflow_dispatch: # 🔹 Permite executar manualmente via botão "Run workflow"
+  workflow_dispatch:        # ✅ botão "Run workflow"
   schedule:
-    - cron: "0 10 * * *" # 🔹 Executa automaticamente todo dia às 10h UTC
+    - cron: "0 10 * * *"    # Executa diariamente às 10h UTC
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
 
     steps:
       - name: 📥 Clonar repositório
@@ -39,7 +40,7 @@ jobs:
           echo "🎨 Verificando Tailwind config..."
           if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
             echo "⚡ Corrigindo extensão do Tailwind para compatibilidade..."
-            mv tailwind.config.ts tailwind.config.js
+            cp tailwind.config.ts tailwind.config.js
           fi
 
       - name: 🧠 Testar build
@@ -49,7 +50,7 @@ jobs:
 
       - name: 🩺 Gerar relatório de diagnóstico
         run: |
-          echo "📊 Gerando relatório de diagnóstico..."
+          echo "📊 Gerando relatório..."
           mkdir -p diagnostics
           echo "Relatório gerado em $(date)" > diagnostics/report-$(date +%F).log
           echo "Verificações do ambiente:" >> diagnostics/report-$(date +%F).log
@@ -64,7 +65,7 @@ jobs:
           branch: "auto-fix/diagnostico-$(date +%s)"
           title: "🧠 Correções automáticas do AutoDiagnóstico Pro"
           body: |
-            Este PR foi gerado automaticamente pelo agente de AutoDiagnóstico Pro.
+            Este PR foi gerado automaticamente pelo agente AutoDiagnóstico Pro.
             Verificações incluídas:
             - Correção de configurações do Tailwind
             - Ajustes de dependências e build
