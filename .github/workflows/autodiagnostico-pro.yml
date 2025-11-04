@@ -1,10 +1,9 @@
 name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
-# 🔹 Garante execução manual e automática
 on:
-  workflow_dispatch:        # ✅ botão "Run workflow"
+  workflow_dispatch:        # ✅ habilita o botão manual Run workflow
   schedule:
-    - cron: "0 10 * * *"    # Executa diariamente às 10h UTC
+    - cron: "0 10 * * *"    # executa diariamente às 10h UTC
 
 permissions:
   contents: write
@@ -39,7 +38,7 @@ jobs:
         run: |
           echo "🎨 Verificando Tailwind config..."
           if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
-            echo "⚡ Corrigindo extensão do Tailwind para compatibilidade..."
+            echo "⚡ Corrigindo extensão do Tailwind..."
             cp tailwind.config.ts tailwind.config.js
           fi
 
@@ -56,9 +55,9 @@ jobs:
           echo "Verificações do ambiente:" >> diagnostics/report-$(date +%F).log
           node -v >> diagnostics/report-$(date +%F).log
           npm -v >> diagnostics/report-$(date +%F).log
-          echo "✅ Diagnóstico concluído com sucesso." >> diagnostics/report-$(date +%F).log
+          echo "✅ Diagnóstico concluído." >> diagnostics/report-$(date +%F).log
 
-      - name: 🛠️ Criar Pull Request automático se houver correções
+      - name: 🛠️ Criar Pull Request automático (se houver correções)
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.AUTO_DIAGNOSTICO_TOKEN }}
@@ -66,14 +65,14 @@ jobs:
           title: "🧠 Correções automáticas do AutoDiagnóstico Pro"
           body: |
             Este PR foi gerado automaticamente pelo agente AutoDiagnóstico Pro.
-            Verificações incluídas:
-            - Correção de configurações do Tailwind
-            - Ajustes de dependências e build
+            Inclui:
+            - Correções Tailwind
+            - Ajustes de build
             - Relatório de integridade do sistema
           commit-message: "fix: correções automáticas do AutoDiagnóstico Pro"
           labels: "autofix, sistema"
           delete-branch: true
 
       - name: ✅ Conclusão
-        run: echo "✅ AutoDiagnóstico Pro concluído com sucesso!"
+        run: echo "✅ Diagnóstico Pro executado com sucesso!"
 
