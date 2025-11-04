@@ -1,0 +1,20 @@
+name: ▶️ Iniciar AutoDiagnóstico Manualmente
+
+on:
+  workflow_dispatch:  # ✅ Habilita o botão “Run workflow” no GitHub Actions
+
+jobs:
+  run-autodiagnostico:
+    name: 🚀 Executar AutoDiagnóstico Pro Autocorretivo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔍 Checando repositório
+        uses: actions/checkout@v4
+
+      - name: 🚀 Disparar AutoDiagnóstico Pro
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: "autodiagnostico-pro.yml"   # Nome exato do arquivo de diagnóstico
+          ref: "main"                           # Branch principal
+
