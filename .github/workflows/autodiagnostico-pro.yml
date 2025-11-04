@@ -1,7 +1,7 @@
 name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
 
 on:
-  workflow_dispatch:        # ✅ habilita o botão manual Run workflow
+  workflow_dispatch:        # ✅ habilita o botão "Run workflow" no GitHub Actions
   schedule:
     - cron: "0 10 * * *"    # executa diariamente às 10h UTC
 
@@ -38,8 +38,10 @@ jobs:
         run: |
           echo "🎨 Verificando Tailwind config..."
           if [ ! -f tailwind.config.js ] && [ -f tailwind.config.ts ]; then
-            echo "⚡ Corrigindo extensão do Tailwind..."
+            echo "⚡ Corrigindo extensão do Tailwind (copiando .ts para .js)"
             cp tailwind.config.ts tailwind.config.js
+          else
+            echo "✅ Tailwind config verificado."
           fi
 
       - name: 🧠 Testar build
@@ -55,7 +57,7 @@ jobs:
           echo "Verificações do ambiente:" >> diagnostics/report-$(date +%F).log
           node -v >> diagnostics/report-$(date +%F).log
           npm -v >> diagnostics/report-$(date +%F).log
-          echo "✅ Diagnóstico concluído." >> diagnostics/report-$(date +%F).log
+          echo "✅ Diagnóstico concluído com sucesso." >> diagnostics/report-$(date +%F).log
 
       - name: 🛠️ Criar Pull Request automático (se houver correções)
         uses: peter-evans/create-pull-request@v5
@@ -66,13 +68,13 @@ jobs:
           body: |
             Este PR foi gerado automaticamente pelo agente AutoDiagnóstico Pro.
             Inclui:
-            - Correções Tailwind
-            - Ajustes de build
+            - Correções Tailwind e build
+            - Verificação de dependências
             - Relatório de integridade do sistema
           commit-message: "fix: correções automáticas do AutoDiagnóstico Pro"
           labels: "autofix, sistema"
           delete-branch: true
 
       - name: ✅ Conclusão
-        run: echo "✅ Diagnóstico Pro executado com sucesso!"
+        run: echo "✅ AutoDiagnóstico Pro concluído com sucesso!"
 
