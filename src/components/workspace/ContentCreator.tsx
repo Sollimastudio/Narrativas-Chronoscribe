@@ -578,42 +578,130 @@ const StepGeneration = ({
   };
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4 text-yellow-400 text-glow">Passo 8: Geração da Narrativa</h2>
-      <p className="text-yellow-300 mb-6">Gere a estrutura visceral da sua narrativa com base nas suas escolhas estratégicas.</p>
+    <div className="animate-fade-in">
+      <h2 className="text-3xl md:text-4xl font-bold mb-6 text-yellow-400 text-glow">Passo 8: Geração da Narrativa</h2>
+      <p className="text-yellow-300 mb-8 text-lg">Gere a estrutura visceral da sua narrativa com base nas suas escolhas estratégicas.</p>
 
-      {/* Resumo das escolhas */}
-      <div className="bg-blue-900/50 rounded-lg p-4 mb-6 border-2 border-yellow-500/30">
-        <h3 className="text-lg font-bold text-yellow-400 mb-3">📋 Resumo das Suas Escolhas:</h3>
-        <div className="space-y-2 text-sm text-yellow-300">
-          <p><strong>Tipo de Conteúdo:</strong> {contentType || 'Não selecionado'}</p>
-          <p><strong>Objetivos:</strong> {objectives.length > 0 ? objectives.join(', ') : 'Nenhum selecionado'}</p>
+      {/* Resumo das escolhas - Card premium */}
+      <div className="card-premium rounded-xl p-6 mb-8 shadow-2xl">
+        <h3 className="text-xl md:text-2xl font-bold text-yellow-400 mb-4 flex items-center gap-2">
+          <span>📋</span>
+          <span>Resumo das Suas Escolhas</span>
+        </h3>
+        <div className="space-y-3 text-yellow-300">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-blue-900/30 rounded-lg p-3">
+            <span className="font-bold text-yellow-400 min-w-[140px]">📚 Tipo de Conteúdo:</span>
+            <span className="text-lg">{contentType || 'Não selecionado'}</span>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row sm:items-start gap-2 bg-blue-900/30 rounded-lg p-3">
+            <span className="font-bold text-yellow-400 min-w-[140px]">🎯 Objetivos:</span>
+            <div className="flex flex-wrap gap-2">
+              {objectives.length > 0 ? (
+                objectives.map((obj, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/50 rounded-full text-sm">
+                    {obj}
+                  </span>
+                ))
+              ) : (
+                <span className="text-yellow-300/70">Nenhum selecionado</span>
+              )}
+            </div>
+          </div>
+
           {seasonsCount > 0 && (
-            <p className="text-yellow-400 font-bold">🎬 Estrutura em {seasonsCount} Temporadas detectada!</p>
+            <div className="bg-gradient-to-r from-yellow-500/20 to-transparent rounded-lg p-4 border-l-4 border-yellow-500 animate-pulse-glow">
+              <p className="text-xl font-bold text-yellow-400 flex items-center gap-2">
+                <span>🎬</span>
+                <span>Estrutura em {seasonsCount} Temporadas detectada!</span>
+              </p>
+            </div>
           )}
+          
           {userPrompt && (
-            <div>
-              <p><strong>Seu Pedido:</strong></p>
-              <p className="text-yellow-200 italic bg-blue-900/30 p-2 rounded mt-1">{userPrompt}</p>
+            <div className="bg-blue-900/40 rounded-lg p-4 border border-yellow-500/30">
+              <p className="font-bold text-yellow-400 mb-2">💭 Seu Pedido:</p>
+              <p className="text-yellow-200 italic leading-relaxed">&ldquo;{userPrompt}&rdquo;</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Botão de gerar */}
-      {!structure && (
-        <button 
-          onClick={generateStructure}
-          disabled={generating}
-          className="w-full px-6 py-4 bg-yellow-500 text-blue-900 rounded-lg font-bold text-lg button-glow hover:bg-yellow-400 transition-colors disabled:opacity-50 mb-6"
-        >
-          {generating ? '⏳ Gerando Estrutura Visceral...' : '✨ Gerar Estrutura da Narrativa'}
-        </button>
+      {/* Botão de gerar - mais chamativo */}
+      {!structure && !generating && (
+        <div className="text-center py-8">
+          <button 
+            onClick={generateStructure}
+            className="touch-target px-8 py-5 bg-gradient-to-r from-yellow-500 to-yellow-400 text-blue-900 rounded-xl font-bold text-xl md:text-2xl button-glow hover:from-yellow-400 hover:to-yellow-300 transition-all shadow-2xl transform hover:scale-105"
+          >
+            <span className="flex items-center justify-center gap-3">
+              <span>✨</span>
+              <span>Gerar Estrutura Visceral Agora</span>
+              <span>🚀</span>
+            </span>
+          </button>
+          <p className="text-yellow-300/70 mt-4 text-sm">
+            💡 O Narrativas Chronoscribe irá analisar todo o conteúdo e criar uma estrutura poderosa
+          </p>
+        </div>
       )}
 
-      {/* Exibir estrutura gerada */}
+      {/* Loading state - animado e profissional */}
+      {generating && (
+        <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 rounded-xl p-8 mb-8 border-2 border-yellow-500/50 shadow-2xl animate-fade-in">
+          <div className="text-center space-y-6">
+            <div className="relative inline-block">
+              <div className="w-20 h-20 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-2xl">✨</span>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <h3 className="text-2xl font-bold text-yellow-400 text-glow">
+                🎨 Criando Sua Narrativa Visceral...
+              </h3>
+              <div className="max-w-md mx-auto space-y-2 text-yellow-300">
+                <p className="shimmer p-2 rounded-lg bg-blue-900/50">📚 Analisando conteúdo dos PDFs...</p>
+                <p className="shimmer p-2 rounded-lg bg-blue-900/50 animation-delay-300">🧠 Aplicando estilo narrativo {narrativeStyle}...</p>
+                <p className="shimmer p-2 rounded-lg bg-blue-900/50 animation-delay-600">🎯 Estruturando para {objectives.join(', ')}...</p>
+                <p className="shimmer p-2 rounded-lg bg-blue-900/50 animation-delay-900">🪝 Gerando ganchos viscerais...</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-yellow-300/70 italic">
+              ⏱️ Isso pode levar alguns segundos para garantir excelência...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Exibir estrutura gerada - melhorado */}
       {structure && (
-        <div className="bg-blue-900/30 rounded-lg p-6 mb-6 border-2 border-yellow-500/50">
+        <div className="space-y-6 animate-fade-in">
+          {/* Header da estrutura */}
+          <div className="bg-gradient-to-r from-yellow-500/20 via-yellow-500/10 to-transparent rounded-xl p-6 border border-yellow-500/50">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h3 className="text-2xl md:text-3xl font-bold text-yellow-400 mb-2 text-glow flex items-center gap-2">
+                  <span>🎉</span>
+                  <span>Estrutura Gerada com Sucesso!</span>
+                </h3>
+                <p className="text-yellow-300">
+                  Sua narrativa visceral está pronta. Revise e prossiga para o próximo passo.
+                </p>
+              </div>
+              <button
+                onClick={generateStructure}
+                className="px-4 py-2 bg-blue-900/50 hover:bg-blue-900/70 text-yellow-400 rounded-lg font-semibold border border-yellow-500/30 transition-colors whitespace-nowrap"
+              >
+                🔄 Regenerar
+              </button>
+            </div>
+          </div>
+
+          {/* Conteúdo da estrutura */}
+          <div className="card-premium rounded-xl p-6 shadow-2xl">{/* ... (rest of structure rendering stays the same) ... */}
           <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-glow">📖 Estrutura Gerada:</h3>
           
           {structure.format === 'seasons' && (
