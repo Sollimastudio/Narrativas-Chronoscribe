@@ -470,14 +470,234 @@ const StepArt = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () =>
   </div>
 );
 
-const StepGeneration = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
-  <div>
-    <h2 className="text-2xl font-bold mb-4 text-yellow-400">Passo 8: Geração da Narrativa</h2>
-    <p className="text-yellow-300">Gere a narrativa final visceral com base nas suas escolhas estratégicas.</p>
-    <button onClick={onPrevious} className="mt-4 mr-2 px-6 py-2 bg-blue-800 text-yellow-400 font-bold rounded-lg border-2 border-yellow-500/50 hover:bg-blue-700 transition-colors button-glow">Anterior</button>
-    <button onClick={onNext} className="mt-4 px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors button-glow">Próximo</button>
-  </div>
-);
+const StepGeneration = ({ 
+  onNext, 
+  onPrevious, 
+  contentType, 
+  userPrompt, 
+  objectives 
+}: { 
+  onNext: () => void; 
+  onPrevious: () => void;
+  contentType: string;
+  userPrompt?: string;
+  objectives: string[];
+}) => {
+  const [generating, setGenerating] = useState(false);
+  const [structure, setStructure] = useState<any>(null);
+
+  // Detectar pedido de temporadas
+  const detectSeasons = () => {
+    if (!userPrompt) return 0;
+    const lowerPrompt = userPrompt.toLowerCase();
+    
+    // Procurar por números + "temporada(s)"
+    const match = lowerPrompt.match(/(\d+)\s*temporada/i);
+    if (match) return parseInt(match[1]);
+    
+    // Palavras-chave comuns
+    if (lowerPrompt.includes('três temporadas') || lowerPrompt.includes('3 temporadas')) return 3;
+    if (lowerPrompt.includes('duas temporadas') || lowerPrompt.includes('2 temporadas')) return 2;
+    if (lowerPrompt.includes('quatro temporadas') || lowerPrompt.includes('4 temporadas')) return 4;
+    
+    return 0;
+  };
+
+  const seasonsCount = detectSeasons();
+
+  const generateStructure = () => {
+    setGenerating(true);
+    
+    // Simular geração de estrutura
+    setTimeout(() => {
+      const baseStructure: any = {
+        contentType,
+        objectives,
+        userRequest: userPrompt
+      };
+
+      if (seasonsCount > 0) {
+        // Estrutura dividida em temporadas
+        baseStructure.format = 'seasons';
+        baseStructure.seasons = Array.from({ length: seasonsCount }, (_, i) => ({
+          number: i + 1,
+          title: `Temporada ${i + 1}: [Título Visceral]`,
+          theme: `Tema central da temporada ${i + 1}`,
+          chapters: [
+            { number: 1, title: 'Capítulo 1 - O Gancho Inicial', hook: 'Frase provocativa que prende o leitor' },
+            { number: 2, title: 'Capítulo 2 - Desenvolvimento Visceral', hook: 'Aprofundamento emocional' },
+            { number: 3, title: 'Capítulo 3 - Clímax da Temporada', hook: 'Momento de virada impactante' },
+          ],
+          climax: `Clímax emocional da temporada ${i + 1}`,
+          resolution: `Gancho para próxima temporada ou fechamento`
+        }));
+      } else if (contentType === 'book') {
+        // Estrutura de livro tradicional
+        baseStructure.format = 'book';
+        baseStructure.parts = [
+          {
+            title: 'Parte I - O Despertar',
+            chapters: Array.from({ length: 10 }, (_, i) => ({
+              number: i + 1,
+              title: `Capítulo ${i + 1} - [Título Poderoso]`,
+              hook: 'Gancho visceral que prende o leitor'
+            }))
+          },
+          {
+            title: 'Parte II - A Jornada',
+            chapters: Array.from({ length: 10 }, (_, i) => ({
+              number: i + 11,
+              title: `Capítulo ${i + 11} - [Título Poderoso]`,
+              hook: 'Desenvolvimento emocional profundo'
+            }))
+          },
+          {
+            title: 'Parte III - A Transformação',
+            chapters: Array.from({ length: 10 }, (_, i) => ({
+              number: i + 21,
+              title: `Capítulo ${i + 21} - [Título Poderoso]`,
+              hook: 'Clímax e resolução visceral'
+            }))
+          }
+        ];
+      } else {
+        // Estrutura simples
+        baseStructure.format = 'simple';
+        baseStructure.outline = [
+          '1. Gancho Inicial (Tensão)',
+          '2. Desenvolvimento (Aprofundamento da Dor)',
+          '3. Virada (Pergunta Reflexiva)',
+          '4. Clímax (Respiro Poético)',
+          '5. Resolução (Chamada à Ação Emocional)'
+        ];
+      }
+
+      setStructure(baseStructure);
+      setGenerating(false);
+    }, 1500);
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4 text-yellow-400 text-glow">Passo 8: Geração da Narrativa</h2>
+      <p className="text-yellow-300 mb-6">Gere a estrutura visceral da sua narrativa com base nas suas escolhas estratégicas.</p>
+
+      {/* Resumo das escolhas */}
+      <div className="bg-blue-900/50 rounded-lg p-4 mb-6 border-2 border-yellow-500/30">
+        <h3 className="text-lg font-bold text-yellow-400 mb-3">📋 Resumo das Suas Escolhas:</h3>
+        <div className="space-y-2 text-sm text-yellow-300">
+          <p><strong>Tipo de Conteúdo:</strong> {contentType || 'Não selecionado'}</p>
+          <p><strong>Objetivos:</strong> {objectives.length > 0 ? objectives.join(', ') : 'Nenhum selecionado'}</p>
+          {seasonsCount > 0 && (
+            <p className="text-yellow-400 font-bold">🎬 Estrutura em {seasonsCount} Temporadas detectada!</p>
+          )}
+          {userPrompt && (
+            <div>
+              <p><strong>Seu Pedido:</strong></p>
+              <p className="text-yellow-200 italic bg-blue-900/30 p-2 rounded mt-1">{userPrompt}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Botão de gerar */}
+      {!structure && (
+        <button 
+          onClick={generateStructure}
+          disabled={generating}
+          className="w-full px-6 py-4 bg-yellow-500 text-blue-900 rounded-lg font-bold text-lg button-glow hover:bg-yellow-400 transition-colors disabled:opacity-50 mb-6"
+        >
+          {generating ? '⏳ Gerando Estrutura Visceral...' : '✨ Gerar Estrutura da Narrativa'}
+        </button>
+      )}
+
+      {/* Exibir estrutura gerada */}
+      {structure && (
+        <div className="bg-blue-900/30 rounded-lg p-6 mb-6 border-2 border-yellow-500/50">
+          <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-glow">📖 Estrutura Gerada:</h3>
+          
+          {structure.format === 'seasons' && (
+            <div className="space-y-6">
+              {structure.seasons.map((season: any, idx: number) => (
+                <div key={idx} className="bg-blue-900/50 rounded-lg p-4 border-l-4 border-yellow-500">
+                  <h4 className="text-xl font-bold text-yellow-400 mb-2">{season.title}</h4>
+                  <p className="text-sm text-yellow-300 mb-3"><strong>Tema:</strong> {season.theme}</p>
+                  
+                  <div className="space-y-2 ml-4">
+                    {season.chapters.map((chapter: any, chIdx: number) => (
+                      <div key={chIdx} className="bg-blue-900/30 rounded p-3 border border-yellow-500/20">
+                        <p className="font-bold text-yellow-400">{chapter.title}</p>
+                        <p className="text-xs text-yellow-300 mt-1">🪝 {chapter.hook}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 space-y-1 text-sm text-yellow-300">
+                    <p><strong>Clímax:</strong> {season.climax}</p>
+                    <p><strong>Resolução:</strong> {season.resolution}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {structure.format === 'book' && (
+            <div className="space-y-6">
+              {structure.parts.map((part: any, idx: number) => (
+                <div key={idx} className="bg-blue-900/50 rounded-lg p-4 border-l-4 border-yellow-500">
+                  <h4 className="text-xl font-bold text-yellow-400 mb-3">{part.title}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {part.chapters.slice(0, 5).map((chapter: any, chIdx: number) => (
+                      <div key={chIdx} className="bg-blue-900/30 rounded p-2 border border-yellow-500/20 text-sm">
+                        <p className="font-bold text-yellow-400">{chapter.title}</p>
+                        <p className="text-xs text-yellow-300 mt-1">🪝 {chapter.hook}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {part.chapters.length > 5 && (
+                    <p className="text-xs text-yellow-300 mt-2 italic">... e mais {part.chapters.length - 5} capítulos</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {structure.format === 'simple' && (
+            <div className="bg-blue-900/50 rounded-lg p-4">
+              <ol className="space-y-2">
+                {structure.outline.map((item: string, idx: number) => (
+                  <li key={idx} className="text-yellow-300">{item}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p className="text-sm text-yellow-300">
+              💡 <strong>Próximo passo:</strong> Esta estrutura será refinada com análise visceral e adaptada ao seu estilo narrativo escolhido.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button 
+          onClick={onPrevious} 
+          className="px-6 py-2 bg-blue-800 text-yellow-400 font-bold rounded-lg border-2 border-yellow-500/50 hover:bg-blue-700 transition-colors button-glow"
+        >
+          ← Anterior
+        </button>
+        <button 
+          onClick={onNext} 
+          disabled={!structure}
+          className="px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors button-glow disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Próximo →
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const StepExport = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
   <div>
@@ -511,7 +731,7 @@ const steps = [
 
 const ContentCreator: React.FC = () => {
   const [step, setStep] = useState(1);
-  const [ingested, setIngested] = useState<{ files: UploadResult[]; urls: string[]; combinedText?: string } | null>(null);
+  const [ingested, setIngested] = useState<{ files: UploadResult[]; urls: string[]; combinedText?: string; userPrompt?: string } | null>(null);
   const [contentType, setContentType] = useState<string>('');
   const [selectedText, setSelectedText] = useState<string>('');
   const [objectives_selected, setObjectives] = useState<string[]>([]);
@@ -561,7 +781,15 @@ const ContentCreator: React.FC = () => {
       case 7:
         return <StepArt onNext={nextStep} onPrevious={prevStep} />;
       case 8:
-        return <StepGeneration onNext={nextStep} onPrevious={prevStep} />;
+        return (
+          <StepGeneration 
+            onNext={nextStep} 
+            onPrevious={prevStep}
+            contentType={contentType}
+            userPrompt={ingested?.userPrompt}
+            objectives={objectives_selected}
+          />
+        );
       case 9:
         return <StepExport onNext={nextStep} onPrevious={prevStep} />;
       case 10:
