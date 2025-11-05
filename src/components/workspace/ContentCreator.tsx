@@ -8,22 +8,25 @@ import { narrativeStyles, contentTypes, objectives } from '@/config/narrative-st
 type UploadResult = { url: string; name: string };
 
 // Step 1 - Upload e URLs
-const StepUpload = ({ onNext, onData }: { onNext: () => void; onData: (v: { files: UploadResult[]; urls: string[]; combinedText?: string }) => void }) => {
+const StepUpload = ({ onNext, onData }: { onNext: () => void; onData: (v: { files: UploadResult[]; urls: string[]; combinedText?: string; userPrompt?: string }) => void }) => {
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadResult[]>([]);
   const [urls, setUrls] = useState<string>('');
+  const [userPrompt, setUserPrompt] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
   const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      // Acumular arquivos em vez de substituir
+      setFiles(prev => [...prev, ...Array.from(e.target.files!)]);
       setStatus(null);
     }
   };
 
   async function uploadAll(): Promise<{ uploaded: UploadResult[]; combinedText: string }> {
-    if (files.length === 0) return { uploaded: [], combinedText: '' };
-    setStatus('Enviando arquivos...');
+    if (files.length === 0) return { uploaded: uploadedFiles, combinedText: '' };
+    setStatus(`Enviando ${files.length} arquivo(s)...`);
     const formData = new FormData();
     for (const f of files) formData.append('file', f);
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -33,7 +36,13 @@ const StepUpload = ({ onNext, onData }: { onNext: () => void; onData: (v: { file
       ? data.files.map((x: any) => ({ url: x.url, name: x.name || x.originalName }))
       : [{ url: data.url ?? data.success ? data.url : '', name: data.name ?? '' }].filter((x) => x.url);
     const combinedText: string = (data.extractedCombinedText as string) || '';
-    return { uploaded: list, combinedText };
+    
+    // Acumular arquivos enviados
+    const newUploaded = [...uploadedFiles, ...list];
+    setUploadedFiles(newUploaded);
+    setFiles([]); // Limpar lista de arquivos pendentes
+    
+    return { uploaded: newUploaded, combinedText };
   }
 
   async function ingestUrls(): Promise<string> {
@@ -58,11 +67,16 @@ const StepUpload = ({ onNext, onData }: { onNext: () => void; onData: (v: { file
     setStatus(null);
     try {
       const [{ uploaded, combinedText }, combinedFromUrls] = await Promise.all([uploadAll(), ingestUrls()]);
-      const finalCombined = [combinedText, combinedFromUrls].filter(Boolean).join('\n\n').trim();
-      onData({ files: uploaded, urls: urls.split(/\s|,|;|\n/).filter(Boolean), combinedText: finalCombined });
-      setStatus('Pronto.');
+      const finalCombined = [combinedText, combinedFromUrls, userPrompt].filter(Boolean).join('\n\n').trim();
+      onData({ 
+        files: uploaded, 
+        urls: urls.split(/\s|,|;|\n/).filter(Boolean), 
+        combinedText: finalCombined,
+        userPrompt 
+      });
+      setStatus('✅ Pronto! Você pode adicionar mais arquivos ou prosseguir.');
     } catch (err: any) {
-      setStatus(err.message || 'Erro ao processar');
+      setStatus('❌ ' + (err.message || 'Erro ao processar'));
     } finally {
       setProcessing(false);
     }
@@ -70,27 +84,90 @@ const StepUpload = ({ onNext, onData }: { onNext: () => void; onData: (v: { file
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Passo 1: Upload de Arquivos e Links</h2>
-      <p className="mb-4">Envie documentos (PDF, DOCX, imagens) e/ou cole links (sites, PDFs, DOCX).</p>
+      <h2 className="text-2xl font-bold mb-4 text-glow">Passo 1: Upload de Arquivos e Links</h2>
+      <p className="mb-4 text-yellow-300">Envie documentos (PDF, DOCX, imagens) e/ou cole links. Você pode adicionar múltiplos PDFs - eles serão acumulados!</p>
 
-      <div className="space-y-3">
-        <input type="file" onChange={handleAddFiles} multiple className="mb-2 text-yellow-400" />
-        <textarea
-          className="w-full rounded-md bg-blue-900 border-2 border-yellow-500/50 p-3 text-sm text-yellow-400 placeholder-yellow-600 focus:border-yellow-400 focus:outline-none"
-          rows={3}
-          placeholder="Cole aqui links (separados por espaço, vírgula ou quebra de linha)"
-          value={urls}
-          onChange={(e) => setUrls(e.target.value)}
-        />
+      <div className="space-y-4">
+        {/* Arquivos já enviados */}
+        {uploadedFiles.length > 0 && (
+          <div className="bg-blue-900/50 rounded-md p-3 border border-yellow-500/30">
+            <h3 className="text-sm font-bold text-yellow-400 mb-2">📁 Arquivos enviados ({uploadedFiles.length}):</h3>
+            <ul className="text-xs text-yellow-300 space-y-1">
+              {uploadedFiles.map((f, i) => (
+                <li key={i}>✓ {f.name}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Arquivos pendentes */}
+        {files.length > 0 && (
+          <div className="bg-blue-900/50 rounded-md p-3 border border-yellow-500/30">
+            <h3 className="text-sm font-bold text-yellow-400 mb-2">📤 Aguardando envio ({files.length}):</h3>
+            <ul className="text-xs text-yellow-300 space-y-1">
+              {files.map((f, i) => (
+                <li key={i}>⏳ {f.name}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-bold text-yellow-400 mb-2">📎 Adicionar Arquivos (PDFs, DOCX, Imagens)</label>
+          <input 
+            type="file" 
+            onChange={handleAddFiles} 
+            multiple 
+            accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+            className="w-full text-yellow-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-yellow-500 file:text-blue-900 hover:file:bg-yellow-400 file:cursor-pointer" 
+          />
+          <p className="text-xs text-yellow-500 mt-1">💡 Você pode selecionar múltiplos arquivos ou adicionar mais depois!</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-yellow-400 mb-2">🔗 Links (URLs)</label>
+          <textarea
+            className="w-full rounded-md bg-blue-900 border-2 border-yellow-500/50 p-3 text-sm text-yellow-400 placeholder-yellow-600 focus:border-yellow-400 focus:outline-none"
+            rows={3}
+            placeholder="Cole aqui links para sites, PDFs online, artigos, etc. (um por linha ou separados por espaço/vírgula)"
+            value={urls}
+            onChange={(e) => setUrls(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-yellow-400 mb-2">✍️ Descrição Adicional / Prompts</label>
+          <textarea
+            className="w-full rounded-md bg-blue-900 border-2 border-yellow-500/50 p-3 text-sm text-yellow-400 placeholder-yellow-600 focus:border-yellow-400 focus:outline-none"
+            rows={5}
+            placeholder="Descreva mais detalhes sobre o que você quer... Exemplo: 'Quero dividir em 3 temporadas', 'Foco em vendas para público feminino 30-45 anos', 'Tom sarcástico e visceral', etc."
+            value={userPrompt}
+            onChange={(e) => setUserPrompt(e.target.value)}
+          />
+          <p className="text-xs text-yellow-500 mt-1">💡 Quanto mais detalhes, melhor o resultado!</p>
+        </div>
+
         <div className="flex gap-3">
-          <button onClick={handleProcess} disabled={processing} className="px-4 py-2 bg-yellow-500 text-blue-900 rounded-md font-bold button-glow hover:bg-yellow-400 disabled:opacity-50">
-            Processar
+          <button 
+            onClick={handleProcess} 
+            disabled={processing || (files.length === 0 && urls.trim() === '')} 
+            className="px-6 py-3 bg-yellow-500 text-blue-900 rounded-md font-bold button-glow hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {processing ? '⏳ Processando...' : files.length > 0 ? `📤 Enviar ${files.length} arquivo(s)` : '🔄 Processar Links'}
           </button>
-          <button onClick={onNext} disabled={processing} className="px-4 py-2 bg-yellow-400 text-blue-900 rounded-md font-bold button-glow hover:bg-yellow-300 disabled:opacity-50">
-            Próximo
+          <button 
+            onClick={onNext} 
+            disabled={processing} 
+            className="px-6 py-3 bg-yellow-400 text-blue-900 rounded-md font-bold button-glow hover:bg-yellow-300 disabled:opacity-50"
+          >
+            Próximo →
           </button>
         </div>
-        {status && <p className="text-sm text-yellow-300">{status}</p>}
+        {status && (
+          <div className={`text-sm p-3 rounded-md ${status.includes('✅') ? 'bg-green-900/30 border border-green-500 text-green-300' : status.includes('❌') ? 'bg-red-900/30 border border-red-500 text-red-300' : 'text-yellow-300'}`}>
+            {status}
+          </div>
+        )}
       </div>
     </div>
   );
