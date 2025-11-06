@@ -83,7 +83,15 @@ export function WorkflowNavigator() {
         );
       case 'geracao':
         return (
-          <ContentCreator />
+          <ContentCreator 
+            format={state.dados.formato || ''}
+            style={state.dados.estilo || ''}
+            analysis={state.dados.analise || {} as any}
+            onContentGenerated={(content) => {
+              dispatch({ type: 'DEFINIR_CONTEUDO', conteudo: content });
+              handleNext();
+            }}
+          />
         );
       case 'exportacao':
         return (

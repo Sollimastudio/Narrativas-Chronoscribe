@@ -211,14 +211,145 @@ const StepArt = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () =>
   </div>
 );
 
-const StepGeneration = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
-  <div>
-    <h2 className="text-2xl font-bold mb-4">Passo 7: Geração da Narrativa</h2>
-    <p>Gere a narrativa final com base nas suas escolhas.</p>
-    <button onClick={onPrevious} className="mt-4 mr-2 px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors">Anterior</button>
-    <button onClick={onNext} className="mt-4 px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors">Próximo</button>
-  </div>
-);
+const StepGeneration = ({ 
+  onNext, 
+  onPrevious, 
+  content, 
+  format, 
+  style, 
+  analysis,
+  onContentGenerated 
+}: { 
+  onNext: () => void; 
+  onPrevious: () => void;
+  content: string;
+  format: string;
+  style: string;
+  analysis?: any;
+  onContentGenerated?: (content: any) => void;
+}) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/narratives', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          format,
+          style,
+          analysis,
+          premium: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao gerar narrativa');
+      }
+
+      const data = await response.json();
+      const narrativeContent = data.narrative || data.content || '';
+      
+      setGeneratedContent(narrativeContent);
+      
+      if (onContentGenerated) {
+        onContentGenerated(narrativeContent);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erro ao gerar conteúdo');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Passo 7: Geração da Narrativa Premium</h2>
+      
+      {!generatedContent && (
+        <>
+          <p className="mb-4">Gere a narrativa final com base nas suas escolhas usando IA avançada.</p>
+          
+          <div className="bg-slate-900/50 p-4 rounded-lg mb-4">
+            <h3 className="font-semibold mb-2">Configurações:</h3>
+            <ul className="text-sm text-slate-300 space-y-1">
+              <li>• Formato: <span className="text-amber-400">{format || 'Padrão'}</span></li>
+              <li>• Estilo: <span className="text-amber-400">{style || 'General'}</span></li>
+              <li>• Análise: <span className="text-amber-400">{analysis ? 'Concluída' : 'Não disponível'}</span></li>
+            </ul>
+          </div>
+
+          {!isGenerating && (
+            <button 
+              onClick={handleGenerate}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all"
+            >
+              🚀 Gerar Narrativa Premium
+            </button>
+          )}
+        </>
+      )}
+
+      {isGenerating && (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-400"></div>
+          <p className="mt-4 text-slate-300">Gerando sua narrativa épica...</p>
+          <p className="mt-2 text-xs text-slate-500">Isso pode levar alguns segundos</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-900/30 border border-red-700 text-red-200 p-4 rounded-lg mb-4">
+          <p className="font-semibold">Erro:</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
+
+      {generatedContent && (
+        <div className="space-y-4">
+          <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-200 p-4 rounded-lg">
+            <p className="font-semibold">✅ Narrativa gerada com sucesso!</p>
+          </div>
+          
+          <div className="bg-slate-900/50 p-6 rounded-lg max-h-96 overflow-y-auto">
+            <h3 className="font-semibold mb-3 text-amber-400">Prévia do Conteúdo:</h3>
+            <div className="text-sm text-slate-200 whitespace-pre-wrap">
+              {generatedContent.slice(0, 500)}
+              {generatedContent.length > 500 && '...'}
+            </div>
+            <p className="mt-3 text-xs text-slate-400">
+              {generatedContent.length} caracteres gerados
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6 flex gap-3">
+        <button 
+          onClick={onPrevious} 
+          disabled={isGenerating}
+          className="px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors disabled:opacity-50"
+        >
+          Anterior
+        </button>
+        {generatedContent && (
+          <button 
+            onClick={onNext} 
+            className="px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors"
+          >
+            Próximo (Exportar)
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const StepExport = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
   <div>
@@ -249,12 +380,24 @@ const steps = [
   'Reutilização',
 ];
 
-const ContentCreator: React.FC = () => {
+interface ContentCreatorProps {
+  format?: string;
+  style?: string;
+  analysis?: any;
+  onContentGenerated?: (content: any) => void;
+}
+
+const ContentCreator: React.FC<ContentCreatorProps> = ({ 
+  format: externalFormat, 
+  style: externalStyle, 
+  analysis,
+  onContentGenerated 
+}) => {
   const [step, setStep] = useState(1);
   const [ingested, setIngested] = useState<{ files: UploadResult[]; urls: string[]; combinedText?: string } | null>(null);
   const [selectedText, setSelectedText] = useState<string>('');
-  const [objective, setObjective] = useState<string>('');
-  const [style, setStyle] = useState<string>('general');
+  const [objective, setObjective] = useState<string>(externalFormat || '');
+  const [style, setStyle] = useState<string>(externalStyle || 'general');
 
   useEffect(() => {
     if (ingested?.combinedText) {
@@ -297,7 +440,17 @@ const ContentCreator: React.FC = () => {
       case 6:
         return <StepArt onNext={nextStep} onPrevious={prevStep} />;
       case 7:
-        return <StepGeneration onNext={nextStep} onPrevious={prevStep} />;
+        return (
+          <StepGeneration 
+            onNext={nextStep} 
+            onPrevious={prevStep}
+            content={selectedText || ingested?.combinedText || ''}
+            format={objective || externalFormat || 'text'}
+            style={style || externalStyle || 'general'}
+            analysis={analysis}
+            onContentGenerated={onContentGenerated}
+          />
+        );
       case 8:
         return <StepExport onNext={nextStep} onPrevious={prevStep} />;
       case 9:
