@@ -12,8 +12,8 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().url().optional(),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
@@ -113,6 +113,15 @@ function normalizePrivateKey(k: string): string {
 
 export function getGoogleCredentials(): GoogleCredentials {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  // Se não tiver projeto configurado, retornar credenciais vazias
+  if (!expectedProject) {
+    return {
+      project_id: '',
+      client_email: '',
+      private_key: '',
+    };
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
