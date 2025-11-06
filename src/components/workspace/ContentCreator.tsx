@@ -701,8 +701,8 @@ const StepGeneration = ({
           </div>
 
           {/* Conteúdo da estrutura */}
-          <div className="card-premium rounded-xl p-6 shadow-2xl">{/* ... (rest of structure rendering stays the same) ... */}
-          <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-glow">📖 Estrutura Gerada:</h3>
+          <div className="card-premium rounded-xl p-6 shadow-2xl">
+            <h3 className="text-2xl font-bold text-yellow-400 mb-4 text-glow">📖 Estrutura Gerada:</h3>
           
           {structure.format === 'seasons' && (
             <div className="space-y-6">
@@ -764,6 +764,7 @@ const StepGeneration = ({
             <p className="text-sm text-yellow-300">
               💡 <strong>Próximo passo:</strong> Esta estrutura será refinada com análise visceral e adaptada ao seu estilo narrativo escolhido.
             </p>
+          </div>
           </div>
         </div>
       )}
