@@ -172,5 +172,15 @@ export function getGoogleCredentials(): GoogleCredentials {
     }
   }
 
+  // Durante o build, retornar credenciais placeholder ao invés de falhar
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.warn('⚠️  Usando credenciais placeholder durante build. Configure Google Cloud para produção.');
+    return {
+      project_id: expectedProject,
+      client_email: 'placeholder@example.com',
+      private_key: '-----BEGIN PRIVATE KEY-----\nplaceholder\n-----END PRIVATE KEY-----\n',
+    };
+  }
+
   throw new Error('Credenciais do Google Cloud não encontradas');
 }
