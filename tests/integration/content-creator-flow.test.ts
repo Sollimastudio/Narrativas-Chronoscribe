@@ -28,17 +28,40 @@ describe('ContentCreator Premium Flow', () => {
   it('deve passar as configurações corretas para a API de narrativas', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ narrative: 'Conteúdo gerado com sucesso' })
+      json: async () => ({ 
+        titulo: 'Narrativa Gerada',
+        conteudo: [{ texto: 'Conteúdo gerado com sucesso' }]
+      })
     });
 
     global.fetch = mockFetch;
 
     const requestBody = {
-      content: 'Conteúdo de teste',
-      format: 'executive',
-      style: 'storytelling',
-      analysis: { score: 85 },
-      premium: true
+      blueprint: {
+        title: 'executive',
+        audience: 'Público geral',
+        objective: 'executive',
+        medium: 'text',
+        tone: 'visionary',
+        lengthGuidance: 'standard',
+        summary: 'Conteúdo de teste',
+        sections: [
+          {
+            id: 'main',
+            title: 'Conteúdo Principal',
+            objective: 'Apresentar o conteúdo de forma estruturada',
+            highlights: []
+          }
+        ],
+        linksURLs: [],
+        arquivosPDFs: '',
+        arquivosMIdia: '',
+        acaoDiretorArte: false,
+        acaoCritico: false
+      },
+      language: 'pt-BR',
+      format: 'markdown',
+      brandVoice: 'storytelling'
     };
 
     const response = await fetch('/api/narratives', {
@@ -51,13 +74,13 @@ describe('ContentCreator Premium Flow', () => {
       '/api/narratives',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        headers: { 'Content-Type': 'application/json' }
       })
     );
 
     const data = await response.json();
-    expect(data.narrative).toBe('Conteúdo gerado com sucesso');
+    expect(data.titulo).toBe('Narrativa Gerada');
+    expect(data.conteudo).toBeDefined();
   });
 
   it('deve lidar com erros da API de narrativas', async () => {
@@ -80,11 +103,14 @@ describe('ContentCreator Premium Flow', () => {
 
   it('deve chamar onContentGenerated quando o conteúdo for gerado', async () => {
     const onContentGenerated = vi.fn();
-    const generatedContent = 'Narrativa épica gerada';
+    const generatedContent = { 
+      titulo: 'Narrativa Épica',
+      conteudo: [{ texto: 'Narrativa épica gerada' }]
+    };
 
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ narrative: generatedContent })
+      json: async () => generatedContent
     });
 
     global.fetch = mockFetch;
@@ -92,13 +118,31 @@ describe('ContentCreator Premium Flow', () => {
     const response = await fetch('/api/narratives', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: 'teste', premium: true })
+      body: JSON.stringify({
+        blueprint: {
+          title: 'teste',
+          audience: 'público',
+          objective: 'objetivo',
+          medium: 'text',
+          tone: 'educational',
+          lengthGuidance: 'standard',
+          summary: 'resumo',
+          sections: [],
+          linksURLs: [],
+          arquivosPDFs: '',
+          arquivosMIdia: '',
+          acaoDiretorArte: false,
+          acaoCritico: false
+        },
+        language: 'pt-BR',
+        format: 'markdown'
+      })
     });
 
     const data = await response.json();
     
     // Simular o callback
-    onContentGenerated(data.narrative);
+    onContentGenerated(data);
 
     expect(onContentGenerated).toHaveBeenCalledWith(generatedContent);
   });

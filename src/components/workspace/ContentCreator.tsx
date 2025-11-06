@@ -225,7 +225,7 @@ const StepGeneration = ({
   content: string;
   format: string;
   style: string;
-  analysis?: any;
+  analysis?: { score?: number; insights?: string[] };
   onContentGenerated?: (content: any) => void;
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -237,29 +237,64 @@ const StepGeneration = ({
     setError(null);
     
     try {
+      // Map style to valid NarrativeTone
+      const toneMap: Record<string, string> = {
+        'general': 'educational',
+        'academic': 'educational',
+        'executive': 'visionary',
+        'storytelling': 'inspirational'
+      };
+      const tone = toneMap[style] || 'educational';
+      
+      // Build proper NarrativeGenerationContext structure
+      const requestBody = {
+        blueprint: {
+          title: format || 'Narrativa Gerada',
+          audience: 'Público geral',
+          objective: format || 'Gerar conteúdo baseado na análise',
+          medium: 'text' as const,
+          tone: tone as 'visionary' | 'educational' | 'inspirational' | 'documentary' | 'sales',
+          lengthGuidance: 'standard' as const,
+          summary: content.slice(0, 500) || 'Conteúdo para narrativa',
+          sections: [
+            {
+              id: 'main',
+              title: 'Conteúdo Principal',
+              objective: 'Apresentar o conteúdo de forma estruturada',
+              highlights: analysis?.insights || []
+            }
+          ],
+          linksURLs: [],
+          arquivosPDFs: '',
+          arquivosMIdia: '',
+          acaoDiretorArte: false,
+          acaoCritico: false
+        },
+        language: 'pt-BR' as const,
+        format: 'markdown' as const,
+        brandVoice: style !== 'general' ? style : undefined
+      };
+
       const response = await fetch('/api/narratives', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          format,
-          style,
-          analysis,
-          premium: true
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error('Falha ao gerar narrativa');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Falha ao gerar narrativa');
       }
 
       const data = await response.json();
-      const narrativeContent = data.narrative || data.content || '';
+      const narrativeContent = data.conteudo 
+        ? data.conteudo.map((s: any) => s.texto).join('\n\n')
+        : data.narrative || data.content || '';
       
       setGeneratedContent(narrativeContent);
       
       if (onContentGenerated) {
-        onContentGenerated(narrativeContent);
+        onContentGenerated(data);
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao gerar conteúdo');
@@ -445,8 +480,8 @@ const ContentCreator: React.FC<ContentCreatorProps> = ({
             onNext={nextStep} 
             onPrevious={prevStep}
             content={selectedText || ingested?.combinedText || ''}
-            format={objective || externalFormat || 'text'}
-            style={style || externalStyle || 'general'}
+            format={objective || 'text'}
+            style={style || 'general'}
             analysis={analysis}
             onContentGenerated={onContentGenerated}
           />
