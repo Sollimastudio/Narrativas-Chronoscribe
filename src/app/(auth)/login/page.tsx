@@ -1,9 +1,17 @@
 // src/app/(auth)/login/page.tsx
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { LoginForm } from "@/components/forms/LoginForm";
+
+function LoginFormWrapper() {
+  return (
+    <Suspense fallback={<div className="text-center text-slate-400">Carregando...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -30,7 +38,7 @@ export default function LoginPage() {
           </p>
         </header>
 
-        <LoginForm />
+        <LoginFormWrapper />
 
         <p className="text-center text-sm text-slate-400">
           Não tem conta?{" "}

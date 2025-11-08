@@ -21,27 +21,36 @@ interface StorageProvider {
 }
 
 class GoogleCloudStorageProvider implements StorageProvider {
-  private storage: Storage;
-  private bucket: string;
+  private storage: Storage | null = null;
+  private bucket: string | null = null;
   
   constructor() {
     const credentials = getGoogleCredentials();
-    this.storage = new Storage({
-      projectId: credentials.project_id,
-      credentials: {
-        client_email: credentials.client_email,
-        private_key: credentials.private_key,
-      },
-    });
-    this.bucket = env.GOOGLE_STORAGE_BUCKET;
+    if (credentials.project_id && env.GOOGLE_STORAGE_BUCKET) {
+      this.storage = new Storage({
+        projectId: credentials.project_id,
+        credentials: {
+          client_email: credentials.client_email,
+          private_key: credentials.private_key,
+        },
+      });
+      this.bucket = env.GOOGLE_STORAGE_BUCKET;
+    }
+  }
+
+  private ensureConfigured(): void {
+    if (!this.storage || !this.bucket) {
+      throw new Error('Google Cloud Storage não está configurado. Configure GOOGLE_CLOUD_PROJECT e GOOGLE_STORAGE_BUCKET.');
+    }
   }
 
   private getBucketName(path?: string): string {
-    return this.bucket; // bucket não deve incluir subpastas
+    return this.bucket!; // bucket não deve incluir subpastas
   }
 
   async uploadFile(file: File, path = 'uploads'): Promise<string> {
-    const bucket = this.storage.bucket(this.getBucketName());
+    this.ensureConfigured();
+    const bucket = this.storage!.bucket(this.getBucketName());
     const extension = SUPPORTED_MIMETYPES[file.type as SupportedMimeType] || '';
     const fileName = `${nanoid()}${extension}`;
     const fullPath = `${path}/${fileName}`;
@@ -66,16 +75,18 @@ class GoogleCloudStorageProvider implements StorageProvider {
   }
 
   async deleteFile(url: string): Promise<void> {
+    this.ensureConfigured();
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = this.storage!.bucket(this.bucket!).file(filePath);
     await file.delete();
   }
 
   async getSignedUrl(url: string, expiresIn = 3600): Promise<string> {
+    this.ensureConfigured();
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = this.storage!.bucket(this.bucket!).file(filePath);
     
     const [signedUrl] = await file.getSignedUrl({
       version: 'v4',
