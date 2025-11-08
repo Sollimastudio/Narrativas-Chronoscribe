@@ -314,23 +314,218 @@ const StepCriticalAnalysis = ({ onNext, onPrevious, content, format, style, onDo
   </div>
 );
 
-const StepArt = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
-  <div>
-    <h2 className="text-2xl font-bold mb-4">Passo 6: Geração de Arte</h2>
-    <p>Crie imagens e outros elementos visuais para sua narrativa.</p>
-    <button onClick={onPrevious} className="mt-4 mr-2 px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors">Anterior</button>
-    <button onClick={onNext} className="mt-4 px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors">Próximo</button>
-  </div>
-);
+const StepArt = ({ onNext, onPrevious, contentType, contentSummary }: { onNext: () => void; onPrevious: () => void; contentType: string; contentSummary: string }) => {
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [numImages, setNumImages] = useState(contentType === 'carrossel' ? 8 : 1);
 
-const StepGeneration = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
-  <div>
-    <h2 className="text-2xl font-bold mb-4">Passo 7: Geração da Narrativa</h2>
-    <p>Gere a narrativa final com base nas suas escolhas.</p>
-    <button onClick={onPrevious} className="mt-4 mr-2 px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors">Anterior</button>
-    <button onClick={onNext} className="mt-4 px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors">Próximo</button>
-  </div>
-);
+  const generateArt = async () => {
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/content/persuasive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'art',
+          contentType,
+          contentSummary,
+          numImages,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Falha na geração de direção de arte');
+
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('Erro ao gerar arte:', error);
+      alert('Erro ao gerar direção de arte. Verifique o console.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Passo 6: Direção de Arte</h2>
+      <p className="mb-4">Gere prompts profissionais de imagem para seu conteúdo.</p>
+
+      {contentType === 'carrossel' && (
+        <div className="mb-4">
+          <label className="block text-sm font-semibold mb-2">Número de imagens (slides):</label>
+          <input
+            type="number"
+            min="1"
+            max="12"
+            value={numImages}
+            onChange={(e) => setNumImages(parseInt(e.target.value) || 1)}
+            className="w-32 rounded-md bg-slate-900 border border-slate-700 p-2 text-sm"
+          />
+        </div>
+      )}
+
+      {!result && (
+        <button
+          onClick={generateArt}
+          disabled={generating}
+          className="px-6 py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-500 transition-colors disabled:opacity-50"
+        >
+          {generating ? 'Gerando...' : 'Gerar Direção de Arte'}
+        </button>
+      )}
+
+      {result && (
+        <div className="mt-4 space-y-4">
+          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+            <h3 className="font-bold mb-2">Prompts Gerados:</h3>
+            {result.artDirection?.prompts ? (
+              <div className="space-y-3">
+                {result.artDirection.prompts.map((prompt: string, i: number) => (
+                  <div key={i} className="bg-slate-800 p-3 rounded text-sm">
+                    <div className="font-semibold text-amber-300 mb-1">Imagem {i + 1}:</div>
+                    <div className="text-slate-300">{prompt}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre className="text-xs bg-slate-800 p-3 rounded overflow-auto max-h-96">
+                {JSON.stringify(result.artDirection, null, 2)}
+              </pre>
+            )}
+          </div>
+          {result.meta?.mock && (
+            <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 text-sm text-amber-200">
+              ⚠️ {result.meta.warning}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-6">
+        <button onClick={onPrevious} className="mr-2 px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors">
+          Anterior
+        </button>
+        <button onClick={onNext} className="px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors">
+          Próximo
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const StepGeneration = ({ onNext, onPrevious, contentType, objectives, style, sourceContent }: { onNext: () => void; onPrevious: () => void; contentType: string; objectives: string[]; style: string; sourceContent: string }) => {
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const generateContent = async () => {
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/content/persuasive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'generate',
+          contentType,
+          objectives,
+          style,
+          sourceContent,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Falha na geração de conteúdo');
+
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error('Erro ao gerar conteúdo:', error);
+      alert('Erro ao gerar conteúdo. Verifique o console.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Passo 7: Geração do Conteúdo</h2>
+      <p className="mb-4">
+        Gere seu <strong>{contentType}</strong> usando a Constituição Chronoscribe com
+        estilo <strong>{style}</strong>.
+      </p>
+
+      {!result && (
+        <div className="mb-4">
+          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 mb-4">
+            <h3 className="font-semibold mb-2">Configuração:</h3>
+            <ul className="text-sm space-y-1 text-slate-300">
+              <li>• Tipo: {contentType}</li>
+              <li>• Objetivos: {objectives.join(', ')}</li>
+              <li>• Estilo: {style}</li>
+              <li>• Material base: {sourceContent.length} caracteres</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={generateContent}
+            disabled={generating}
+            className="px-8 py-4 bg-emerald-600 text-white text-lg font-bold rounded-lg hover:bg-emerald-500 transition-colors disabled:opacity-50 shadow-lg"
+          >
+            {generating ? 'Gerando Conteúdo...' : '✨ Gerar Conteúdo Persuasivo'}
+          </button>
+        </div>
+      )}
+
+      {result && (
+        <div className="mt-4 space-y-4">
+          <div className="bg-emerald-900/20 border border-emerald-700 rounded-lg p-4">
+            <h3 className="font-bold text-emerald-300 mb-2">✓ Conteúdo Gerado!</h3>
+            <p className="text-sm text-slate-300">
+              Tipo: {result.meta?.contentType} | 
+              Gerado em: {result.meta?.timestamp ? new Date(result.meta.timestamp).toLocaleString('pt-BR') : '—'}
+            </p>
+          </div>
+
+          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 max-h-96 overflow-auto">
+            <h3 className="font-bold mb-3">{result.content?.titulo || 'Conteúdo Gerado'}</h3>
+            {result.content?.subtitulo && (
+              <p className="text-slate-400 mb-4">{result.content.subtitulo}</p>
+            )}
+            {result.content?.conteudo && Array.isArray(result.content.conteudo) ? (
+              <div className="space-y-4">
+                {result.content.conteudo.map((section: any, i: number) => (
+                  <div key={i}>
+                    {section.subtitulo && (
+                      <h4 className="font-semibold text-amber-300 mb-2">{section.subtitulo}</h4>
+                    )}
+                    <div className="text-sm text-slate-300 whitespace-pre-wrap">{section.texto}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre className="text-xs bg-slate-800 p-3 rounded overflow-auto">
+                {JSON.stringify(result.content, null, 2)}
+              </pre>
+            )}
+          </div>
+
+          {result.meta?.mock && (
+            <div className="bg-amber-900/30 border border-amber-700 rounded-lg p-3 text-sm text-amber-200">
+              ⚠️ {result.meta.warning}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-6">
+        <button onClick={onPrevious} className="mr-2 px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-500 transition-colors">
+          Anterior
+        </button>
+        <button onClick={onNext} disabled={!result} className="px-6 py-2 bg-yellow-500 text-blue-900 font-bold rounded-lg shadow-md hover:bg-yellow-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          Próximo
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const StepExport = ({ onNext, onPrevious }: { onNext: () => void; onPrevious: () => void }) => (
   <div>
@@ -409,9 +604,25 @@ const ContentCreator: React.FC = () => {
           />
         );
       case 6:
-        return <StepArt onNext={nextStep} onPrevious={prevStep} />;
+        return (
+          <StepArt
+            onNext={nextStep}
+            onPrevious={prevStep}
+            contentType={contentType}
+            contentSummary={selectedText.substring(0, 500) || 'Sem resumo disponível'}
+          />
+        );
       case 7:
-        return <StepGeneration onNext={nextStep} onPrevious={prevStep} />;
+        return (
+          <StepGeneration
+            onNext={nextStep}
+            onPrevious={prevStep}
+            contentType={contentType}
+            objectives={objectives}
+            style={style}
+            sourceContent={selectedText || ingested?.combinedText || ''}
+          />
+        );
       case 8:
         return <StepExport onNext={nextStep} onPrevious={prevStep} />;
       case 9:
