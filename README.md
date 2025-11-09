@@ -1,6 +1,48 @@
-# Narrativas Chronoscribe · Meta-Agente L5
+# Narrativas Chronoscribe · Meta-Agente L5 - Arquiteto Mestre
 
-Aplicação Next.js (App Router) que permite arquitetar narrativas e roteiros multimídia utilizando o motor OpenAI. O painel combina modelagem de blueprint narrativa, enforcing de limites por plano e geração automatizada com rastreio de uso.
+**Estúdio completo de narrativas persuasivas.** Transforme PDFs, textos e ideias em conteúdo de alta conversão usando PNL, UCG e Storytelling Estratégico.
+
+## ✨ O Que Este App Faz?
+
+Cria conteúdo profissional persuasivo em 9 etapas simples:
+
+1. **Upload** - Envie PDFs, DOCX, links
+2. **Tipo** - Escolha: Livro, Ebook, Carrossel, VSL, Mentoria, etc
+3. **Objetivos** - Vendas, Engajamento, Crescimento, Autoridade...
+4. **Estilo** - Montanha-Russa da Viralidade, Executivo, Poético...
+5. **Análise** - Crítica estratégica do conteúdo
+6. **Arte** - Prompts profissionais de imagem
+7. **Geração** - ✨ Conteúdo persuasivo completo usando a Constituição Chronoscribe
+8. **Exportação** - PDF, DOCX, Markdown (em breve)
+9. **Reutilização** - Variações e adaptações (em breve)
+
+## 🚀 Setup Rápido (2 minutos)
+
+```bash
+# 1. Instalar
+npm install
+
+# 2. Configurar banco e variáveis
+npm run setup
+
+# 3. Adicionar sua chave OpenAI (OPCIONAL - funciona sem!)
+# Edite .env.local e adicione:
+# OPENAI_API_KEY=sk-sua-chave-aqui
+
+# 4. Iniciar
+npm run dev
+
+# 5. Acessar
+# http://localhost:3100/arquiteto
+```
+
+> **Sem chave OpenAI?** O app funciona em modo simulado (exemplo). Para conteúdo real, adicione a chave.
+
+## 📖 [Guia Completo de Uso](./GUIA-DE-USO.md)
+
+**Leia o [GUIA-DE-USO.md](./GUIA-DE-USO.md)** para instruções detalhadas, dicas e solução de problemas.
+
+---
 
 ## Stack
 
