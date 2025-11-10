@@ -21,27 +21,46 @@ interface StorageProvider {
 }
 
 class GoogleCloudStorageProvider implements StorageProvider {
-  private storage: Storage;
-  private bucket: string;
+  private storage: Storage | null = null;
+  private bucket: string | null = null;
+  private isAvailable: boolean = false;
   
   constructor() {
     const credentials = getGoogleCredentials();
-    this.storage = new Storage({
-      projectId: credentials.project_id,
-      credentials: {
-        client_email: credentials.client_email,
-        private_key: credentials.private_key,
-      },
-    });
-    this.bucket = env.GOOGLE_STORAGE_BUCKET;
+    if (credentials && env.GOOGLE_STORAGE_BUCKET) {
+      try {
+        this.storage = new Storage({
+          projectId: credentials.project_id,
+          credentials: {
+            client_email: credentials.client_email,
+            private_key: credentials.private_key,
+          },
+        });
+        this.bucket = env.GOOGLE_STORAGE_BUCKET;
+        this.isAvailable = true;
+        console.log('✅ Storage provider: Google Cloud Storage configurado');
+      } catch (error) {
+        console.warn('⚠️ Storage provider: Falha ao inicializar:', error);
+      }
+    } else {
+      console.warn('⚠️ Storage provider: Google Cloud Storage não configurado');
+    }
+  }
+
+  private checkAvailability() {
+    if (!this.isAvailable || !this.storage || !this.bucket) {
+      throw new Error('Google Cloud Storage não está configurado. Configure as variáveis de ambiente necessárias.');
+    }
   }
 
   private getBucketName(path?: string): string {
-    return this.bucket; // bucket não deve incluir subpastas
+    return this.bucket!; // bucket não deve incluir subpastas
   }
 
   async uploadFile(file: File, path = 'uploads'): Promise<string> {
-    const bucket = this.storage.bucket(this.getBucketName());
+    this.checkAvailability();
+    
+    const bucket = this.storage!.bucket(this.getBucketName());
     const extension = SUPPORTED_MIMETYPES[file.type as SupportedMimeType] || '';
     const fileName = `${nanoid()}${extension}`;
     const fullPath = `${path}/${fileName}`;
@@ -66,16 +85,20 @@ class GoogleCloudStorageProvider implements StorageProvider {
   }
 
   async deleteFile(url: string): Promise<void> {
+    this.checkAvailability();
+    
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = this.storage!.bucket(this.bucket!).file(filePath);
     await file.delete();
   }
 
   async getSignedUrl(url: string, expiresIn = 3600): Promise<string> {
+    this.checkAvailability();
+    
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = this.storage!.bucket(this.bucket!).file(filePath);
     
     const [signedUrl] = await file.getSignedUrl({
       version: 'v4',

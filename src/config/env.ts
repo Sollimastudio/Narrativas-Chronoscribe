@@ -12,8 +12,8 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().url().optional(),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
@@ -40,16 +40,26 @@ const envSchema = z.object({
 // Parse variáveis básicas (planas)
 const raw = envSchema.parse(process.env);
 
-// Early gating em variáveis essenciais
+// Early gating em variáveis essenciais (mais flexível para desenvolvimento)
+const isProd = raw.NODE_ENV === 'production';
+const isBuild = process.env.NEXT_PHASE === 'phase-production-build';
 const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
+
 const missing = [
   hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
   !raw.DATABASE_URL ? 'DATABASE_URL' : null,
-  !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
-  !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
+  // NEXTAUTH_URL e OPENAI_API_KEY são obrigatórias apenas em produção runtime (não em build)
+  isProd && !isBuild && !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
+  isProd && !isBuild && !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
 ].filter(Boolean) as string[];
+
 if (missing.length) {
-  throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
+  console.error(`⚠️ Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
+  if (isProd && !isBuild) {
+    throw new Error(`Variáveis obrigatórias ausentes em produção: ${missing.join(', ')}.`);
+  } else {
+    console.warn('⚠️ Continuando em modo desenvolvimento/build sem todas as variáveis. Algumas funcionalidades podem não funcionar.');
+  }
 }
 
 // Objeto de configuração composto usado pelo resto do app
@@ -111,8 +121,13 @@ function normalizePrivateKey(k: string): string {
   return (k || '').includes('\\n') ? k.replace(/\\n/g, '\n') : k;
 }
 
-export function getGoogleCredentials(): GoogleCredentials {
+export function getGoogleCredentials(): GoogleCredentials | null {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  // Se não há projeto configurado, retorna null (Google Cloud é opcional)
+  if (!expectedProject) {
+    return null;
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
@@ -172,5 +187,6 @@ export function getGoogleCredentials(): GoogleCredentials {
     }
   }
 
-  throw new Error('Credenciais do Google Cloud não encontradas');
+  console.warn('⚠️ Credenciais do Google Cloud não encontradas. Storage em nuvem não estará disponível.');
+  return null;
 }
