@@ -29,6 +29,13 @@ function ensureEnvFile() {
     "AUTH_SECRET=",
     'DATABASE_URL="file:./prisma/dev.db"',
     "",
+    "# NextAuth URL (para autenticação)",
+    "NEXTAUTH_URL=http://localhost:3100",
+    "",
+    "# Google Cloud (opcional - só necessário para upload na nuvem)",
+    "# GOOGLE_CLOUD_PROJECT=",
+    "# GOOGLE_STORAGE_BUCKET=",
+    "",
   ].join("\n");
 
   fs.writeFileSync(ENV_PATH, template, { encoding: "utf8" });
@@ -111,12 +118,25 @@ function prismaSync(env) {
   }
 }
 
+function ensureNextAuthUrl(env) {
+  if (env.NEXTAUTH_URL) {
+    console.log(`• NEXTAUTH_URL já definido (${env.NEXTAUTH_URL}).`);
+    return;
+  }
+
+  const defaultUrl = "http://localhost:3100";
+  upsertEnv("NEXTAUTH_URL", defaultUrl);
+  console.log(`• NEXTAUTH_URL definido para ${defaultUrl}.`);
+}
+
 function main() {
   ensureEnvFile();
   let env = parseEnvFile();
   ensureAuthSecret(env);
   env = parseEnvFile();
   ensureDatabaseUrl(env);
+  env = parseEnvFile();
+  ensureNextAuthUrl(env);
   env = parseEnvFile();
   prismaSync(env);
   console.log("✅ Setup concluído. Revise .env.local e continue com npm run dev.");
