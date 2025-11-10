@@ -8,6 +8,7 @@
     "start": "next start -p 3100",
     "lint": "next lint",
     "setup": "node scripts/setup.js",
+    "validate": "node scripts/validate-setup.js",
     "check-env": "node scripts/check-env.js",
     "seed:plans": "node scripts/seed-plans.js",
     "release": "node scripts/release.js",
