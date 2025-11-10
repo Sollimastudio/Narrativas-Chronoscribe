@@ -181,6 +181,56 @@ Deve retornar JSON com:
 
 ---
 
+## 🔐 Primeiro Acesso — Criar Conta
+
+**IMPORTANTE:** Antes de fazer login, você precisa criar uma conta!
+
+### Erro 401 ao tentar login?
+Isso é normal! Significa que você ainda não tem uma conta cadastrada.
+
+### Como criar a primeira conta:
+
+1. **Acesse a página de registro:**
+   ```
+   http://localhost:3100/register
+   ```
+
+2. **Preencha o formulário:**
+   - Nome completo
+   - E-mail
+   - Senha (mínimo 8 caracteres)
+
+3. **Clique em "Cadastrar"**
+
+4. **Agora sim, faça login:**
+   ```
+   http://localhost:3100/login
+   ```
+   Use o mesmo e-mail e senha que você cadastrou.
+
+### Logs normais durante registro/login:
+
+```bash
+# Ao acessar /register - NORMAL
+GET /register 200 in 1014ms
+
+# Ao cadastrar - SUCESSO
+POST /api/auth/register 200 in 150ms
+
+# Ao fazer login - SUCESSO
+POST /api/auth/callback/credentials 200 in 100ms
+
+# Ao tentar login SEM cadastro - ESPERADO
+POST /api/auth/callback/credentials 401 in 36ms
+```
+
+O erro `401` só acontece se:
+- ✅ Você ainda não criou conta (vá para `/register`)
+- ✅ E-mail ou senha incorretos
+- ✅ Senha tem menos de 8 caracteres
+
+---
+
 ## 🆘 Ainda Não Funciona?
 
 Execute este comando e cole a saída completa:
