@@ -85,6 +85,33 @@ Agora sim, abra: **http://localhost:3100**
 - `.env` = template vazio (pode ignorar)
 - `.env.local` = suas configurações reais
 
+### "Error validating datasource: the URL must start with the protocol `file:`"
+
+**Causa:** DATABASE_URL no `.env.local` está com formato incorreto para desenvolvimento local.
+
+**Solução:**
+1. Abra `.env.local` e corrija a linha:
+   ```bash
+   # INCORRETO (formato PostgreSQL para local):
+   DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+   DATABASE_URL=postgres://...
+   
+   # CORRETO para desenvolvimento local (SQLite):
+   DATABASE_URL="file:./prisma/dev.db"
+   ```
+
+2. Ou simplesmente rode:
+   ```bash
+   npm run setup  # Vai corrigir automaticamente
+   ```
+
+3. Depois rode novamente:
+   ```bash
+   npm run dev
+   ```
+
+**Nota:** Para PRODUÇÃO na Vercel, use PostgreSQL. Para desenvolvimento LOCAL, use SQLite (`file:`).
+
 ### "npm run dev falha"
 Verifique os erros no terminal:
 
