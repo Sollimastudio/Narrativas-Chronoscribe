@@ -7,13 +7,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default('file:./dev.db'),
   AUTH_SECRET: z.string().min(1).optional(),
   NEXTAUTH_SECRET: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional().or(z.literal('')),
   OPENAI_MODEL: z.string().min(1).optional(),
   OPENAI_BASE_URL: z.string().url().optional(),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
@@ -45,8 +45,6 @@ const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
 const missing = [
   hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
   !raw.DATABASE_URL ? 'DATABASE_URL' : null,
-  !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
-  !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
 ].filter(Boolean) as string[];
 if (missing.length) {
   throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
@@ -111,8 +109,13 @@ function normalizePrivateKey(k: string): string {
   return (k || '').includes('\\n') ? k.replace(/\\n/g, '\n') : k;
 }
 
-export function getGoogleCredentials(): GoogleCredentials {
+export function getGoogleCredentials(): GoogleCredentials | null {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  // Se não tiver projeto configurado, retorna null
+  if (!expectedProject) {
+    return null;
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
@@ -172,5 +175,6 @@ export function getGoogleCredentials(): GoogleCredentials {
     }
   }
 
-  throw new Error('Credenciais do Google Cloud não encontradas');
+  // Retorna null se não encontrar credenciais
+  return null;
 }
