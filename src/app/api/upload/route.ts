@@ -13,17 +13,25 @@ async function loadPdfJs() {
   return pdfjs as any;
 }
 
-// Initialize Google Cloud Storage using service account credentials
-const credentials = getGoogleCredentials();
-const storage = new Storage({
-  projectId: credentials.project_id,
-  credentials: {
-    client_email: credentials.client_email,
-    private_key: credentials.private_key,
-  },
-});
+// Initialize Google Cloud Storage usando service account credentials (opcional)
+let storage: Storage | null = null;
+let bucket: any = null;
 
-const bucket = storage.bucket(env.GOOGLE_STORAGE_BUCKET);
+try {
+  const credentials = getGoogleCredentials();
+  if (credentials && env.GOOGLE_STORAGE_BUCKET) {
+    storage = new Storage({
+      projectId: credentials.project_id,
+      credentials: {
+        client_email: credentials.client_email,
+        private_key: credentials.private_key,
+      },
+    });
+    bucket = storage.bucket(env.GOOGLE_STORAGE_BUCKET);
+  }
+} catch (error) {
+  console.warn('Google Cloud Storage não configurado, usando armazenamento local:', error);
+}
 
 async function extractFromPdf(input: ArrayBuffer | Buffer): Promise<string> {
   const data = Buffer.isBuffer(input) ? input : Buffer.from(input);
@@ -89,47 +97,46 @@ export async function POST(req: NextRequest) {
       // Extrai texto quando possível
       const extractedText = await extractText(file, buffer);
 
-      // Try Google Cloud Storage first
-      try {
-        const blob = bucket.file(filename);
-        const blobStream = blob.createWriteStream({
-          resumable: false,
-          contentType: file.type || 'application/octet-stream',
-          metadata: { contentType: file.type || 'application/octet-stream' },
-        });
-
-        await new Promise((resolve, reject) => {
-          blobStream.on('finish', resolve);
-          blobStream.on('error', (err) => {
-            console.error('GCS Upload Error:', err);
-            reject(new Error('Could not upload the file.'));
-          });
-          blobStream.end(buffer);
-        });
-
-        // Make file public (optional). Comment out if you want private uploads.
+      // Try Google Cloud Storage first if available
+      if (bucket) {
         try {
-          await blob.makePublic();
-        } catch (e) {
-          console.warn('Failed to make file public. Check bucket ACL policies.');
+          const blob = bucket.file(filename);
+          const blobStream = blob.createWriteStream({
+            resumable: false,
+            contentType: file.type || 'application/octet-stream',
+            metadata: { contentType: file.type || 'application/octet-stream' },
+          });
+
+          await new Promise((resolve, reject) => {
+            blobStream.on('finish', resolve);
+            blobStream.on('error', (err: Error) => {
+              console.error('GCS Upload Error:', err);
+              reject(new Error('Could not upload the file.'));
+            });
+            blobStream.end(buffer);
+          });
+
+          // Make file public (optional). Comment out if you want private uploads.
+          try {
+            await blob.makePublic();
+          } catch (e) {
+            console.warn('Failed to make file public. Check bucket ACL policies.');
+          }
+
+          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
+          return { success: true, url: publicUrl, name: filename, type: file.type, extractedText };
+        } catch (cloudErr) {
+          console.warn('Cloud storage failed, falling back to local:', cloudErr);
         }
-
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
-        return { success: true, url: publicUrl, name: filename, type: file.type, extractedText };
-      } catch (cloudErr) {
-        console.warn('Falling back to local upload due to cloud error:', cloudErr);
-
-        if (process.env.NODE_ENV === 'development') {
-          const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-          await fs.mkdir(uploadsDir, { recursive: true });
-          const localPath = path.join(uploadsDir, filename);
-          await fs.writeFile(localPath, buffer);
-          const localUrl = `/uploads/${filename}`;
-          return { success: true, url: localUrl, name: filename, type: file.type, extractedText, local: true };
-        }
-
-        throw new Error('Upload failed.');
       }
+
+      // Fallback para armazenamento local
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const localPath = path.join(uploadsDir, filename);
+      await fs.writeFile(localPath, buffer);
+      const localUrl = `/uploads/${filename}`;
+      return { success: true, url: localUrl, name: filename, type: file.type, extractedText, local: true };
     };
 
     const results = await Promise.all(files.map(uploadOne));
