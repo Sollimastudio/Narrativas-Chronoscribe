@@ -106,6 +106,16 @@ export class OpenAIProvider {
     systemPrompt: string;
     userPrompt: string;
   }): Promise<GeneratedNarrative> {
+    if (!this.apiKey) {
+      console.error('❌ OPENAI_API_KEY não configurada. Configure a variável de ambiente.');
+      throw new ProviderError(
+        "openai",
+        "OPENAI_API_KEY não configurada. Configure a variável de ambiente OPENAI_API_KEY."
+      );
+    }
+
+    console.log(`🤖 Gerando conteúdo com modelo: ${this.model}`);
+    
     const response = await fetch(this.endpoint, {
       method: "POST",
       headers: {
@@ -127,6 +137,7 @@ export class OpenAIProvider {
 
     if (!response.ok) {
       const errorBody = await response.text();
+      console.error(`❌ Erro do OpenAI (${response.status}):`, errorBody);
       throw new ProviderError(
         "openai",
         `Falha na chamada ao modelo (${response.status}): ${errorBody}`
@@ -138,12 +149,15 @@ export class OpenAIProvider {
     const content = choice?.message?.content?.trim();
 
     if (!content) {
+      console.error('❌ OpenAI retornou resposta vazia');
       throw new ProviderError(
         "openai",
         "O modelo não retornou conteúdo textual."
       );
     }
 
+    console.log('✅ Conteúdo gerado com sucesso');
+    
     const structured = parseStructuredOutput(content);
 
     return {

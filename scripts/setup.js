@@ -76,6 +76,17 @@ function ensureAuthSecret(env) {
 
 function ensureDatabaseUrl(env) {
   if (env.DATABASE_URL) {
+    // Verifica se é SQLite válido para desenvolvimento local
+    const dbUrl = env.DATABASE_URL.replace(/^"|"$/g, '');
+    
+    if (!dbUrl.startsWith('file:') && !dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
+      console.warn('⚠️  DATABASE_URL parece inválida. Corrigindo para SQLite local...');
+      const defaultUrl = '"file:./prisma/dev.db"';
+      upsertEnv("DATABASE_URL", defaultUrl);
+      console.log(`• DATABASE_URL corrigido para ${defaultUrl}.`);
+      return defaultUrl;
+    }
+    
     console.log(`• DATABASE_URL já definido (${env.DATABASE_URL}).`);
     return env.DATABASE_URL;
   }
