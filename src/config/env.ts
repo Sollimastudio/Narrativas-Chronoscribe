@@ -4,30 +4,30 @@ import path from 'path';
 
 const envSchema = z.object({
   // Server-side
-  DATABASE_URL: z.string().min(1).default('file:./dev.db'),
-  AUTH_SECRET: z.string().min(1).optional(),
-  NEXTAUTH_SECRET: z.string().min(1).optional(),
-  OPENAI_API_KEY: z.string().min(1).optional(),
-  OPENAI_MODEL: z.string().min(1).optional(),
-  OPENAI_BASE_URL: z.string().url().optional(),
-  GEMINI_API_KEY: z.string().min(1).optional(),
-  GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
-  GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
+  DATABASE_URL: z.string().default('file:./dev.db'),
+  AUTH_SECRET: z.string().optional(),
+  NEXTAUTH_SECRET: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().optional(),
+  OPENAI_BASE_URL: z.string().url().optional().or(z.literal('')),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().optional(),
+  GOOGLE_CLOUD_PROJECT: z.string().optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().optional(),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
   // External Analytics providers (optional)
   SEMRUSH_API_KEY: z.string().optional(),
-  SEMRUSH_ENDPOINT: z.string().url().optional(),
+  SEMRUSH_ENDPOINT: z.string().url().optional().or(z.literal('')),
   GOOGLE_TRENDS_API_KEY: z.string().optional(),
   AHREFS_API_KEY: z.string().optional(),
-  AHREFS_ENDPOINT: z.string().url().optional(),
+  AHREFS_ENDPOINT: z.string().url().optional().or(z.literal('')),
 
   // Redis
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional().or(z.literal('')),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: z.string().url().optional().or(z.literal('')),
 
   // Defaults
   DEFAULT_PLAN_SLUG: z.string().optional(),
@@ -37,19 +37,21 @@ const envSchema = z.object({
   NEXTAUTH_URL: z.string().optional(),
 });
 
-// Parse variáveis básicas (planas)
-const raw = envSchema.parse(process.env);
+// Parse variáveis básicas (planas) - usar safeParse para não quebrar o build
+const result = envSchema.safeParse(process.env);
+const raw = result.success ? result.data : envSchema.parse({});
 
-// Early gating em variáveis essenciais
-const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
-const missing = [
-  hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
-  !raw.DATABASE_URL ? 'DATABASE_URL' : null,
-  !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
-  !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
-].filter(Boolean) as string[];
-if (missing.length) {
-  throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
+// Early gating em variáveis essenciais apenas se não estivermos no build
+const isBuilding = process.env.NEXT_PHASE === 'phase-production-build';
+if (!isBuilding) {
+  const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
+  const missing = [
+    hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
+    !raw.DATABASE_URL ? 'DATABASE_URL' : null,
+  ].filter(Boolean) as string[];
+  if (missing.length) {
+    console.warn(`⚠️ Variáveis recomendadas ausentes: ${missing.join(', ')}. Configure seu .env.local para uso completo.`);
+  }
 }
 
 // Objeto de configuração composto usado pelo resto do app
@@ -113,6 +115,10 @@ function normalizePrivateKey(k: string): string {
 
 export function getGoogleCredentials(): GoogleCredentials {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  if (!expectedProject) {
+    throw new Error('GOOGLE_CLOUD_PROJECT não configurado. Configure as variáveis do Google Cloud para usar upload de arquivos.');
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
   SessionRequired: "Faça login para acessar esta página.",
 };
 
-export function LoginForm() {
+function LoginFormContent() {
   const params = useSearchParams();
 
   const callbackUrl = useMemo(
@@ -104,5 +104,13 @@ export function LoginForm() {
         {isSubmitting ? "Entrando..." : "Entrar"}
       </Button>
     </form>
+  );
+}
+
+export function LoginForm() {
+  return (
+    <Suspense fallback={<div className="text-center text-slate-400">Carregando...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }
