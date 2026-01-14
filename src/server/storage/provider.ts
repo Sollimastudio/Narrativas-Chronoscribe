@@ -21,26 +21,39 @@ interface StorageProvider {
 }
 
 class GoogleCloudStorageProvider implements StorageProvider {
-  private storage: Storage;
-  private bucket: string;
+  private storage: Storage | null = null;
+  private bucket: string | null = null;
   
   constructor() {
-    const credentials = getGoogleCredentials();
-    this.storage = new Storage({
-      projectId: credentials.project_id,
-      credentials: {
-        client_email: credentials.client_email,
-        private_key: credentials.private_key,
-      },
-    });
-    this.bucket = env.GOOGLE_STORAGE_BUCKET;
+    try {
+      const credentials = getGoogleCredentials();
+      if (credentials && env.GOOGLE_STORAGE_BUCKET) {
+        this.storage = new Storage({
+          projectId: credentials.project_id,
+          credentials: {
+            client_email: credentials.client_email,
+            private_key: credentials.private_key,
+          },
+        });
+        this.bucket = env.GOOGLE_STORAGE_BUCKET;
+      }
+    } catch (error) {
+      console.warn('Google Cloud Storage não configurado:', error);
+    }
   }
 
   private getBucketName(path?: string): string {
+    if (!this.bucket) {
+      throw new Error('Google Cloud Storage não configurado');
+    }
     return this.bucket; // bucket não deve incluir subpastas
   }
 
   async uploadFile(file: File, path = 'uploads'): Promise<string> {
+    if (!this.storage || !this.bucket) {
+      throw new Error('Google Cloud Storage não configurado');
+    }
+
     const bucket = this.storage.bucket(this.getBucketName());
     const extension = SUPPORTED_MIMETYPES[file.type as SupportedMimeType] || '';
     const fileName = `${nanoid()}${extension}`;
@@ -66,6 +79,10 @@ class GoogleCloudStorageProvider implements StorageProvider {
   }
 
   async deleteFile(url: string): Promise<void> {
+    if (!this.storage || !this.bucket) {
+      throw new Error('Google Cloud Storage não configurado');
+    }
+
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
     const file = this.storage.bucket(this.bucket).file(filePath);
@@ -73,6 +90,10 @@ class GoogleCloudStorageProvider implements StorageProvider {
   }
 
   async getSignedUrl(url: string, expiresIn = 3600): Promise<string> {
+    if (!this.storage || !this.bucket) {
+      throw new Error('Google Cloud Storage não configurado');
+    }
+
     const prefix = `https://storage.googleapis.com/${this.bucket}/`;
     const filePath = url.replace(prefix, '');
     const file = this.storage.bucket(this.bucket).file(filePath);
