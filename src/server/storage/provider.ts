@@ -21,31 +21,39 @@ interface StorageProvider {
 }
 
 class GoogleCloudStorageProvider implements StorageProvider {
-  private storage: Storage;
-  private bucket: string;
+  private storage: Storage | null = null;
+  private bucket: string | null = null;
   
-  constructor() {
-    const credentials = getGoogleCredentials();
-    this.storage = new Storage({
-      projectId: credentials.project_id,
-      credentials: {
-        client_email: credentials.client_email,
-        private_key: credentials.private_key,
-      },
-    });
-    this.bucket = env.GOOGLE_STORAGE_BUCKET;
+  private initStorage() {
+    if (!this.storage) {
+      const credentials = getGoogleCredentials();
+      this.storage = new Storage({
+        projectId: credentials.project_id,
+        credentials: {
+          client_email: credentials.client_email,
+          private_key: credentials.private_key,
+        },
+      });
+      if (!env.GOOGLE_STORAGE_BUCKET) {
+        throw new Error('GOOGLE_STORAGE_BUCKET não configurado');
+      }
+      this.bucket = env.GOOGLE_STORAGE_BUCKET;
+    }
+    return { storage: this.storage, bucket: this.bucket! };
   }
 
   private getBucketName(path?: string): string {
-    return this.bucket; // bucket não deve incluir subpastas
+    const { bucket } = this.initStorage();
+    return bucket; // bucket não deve incluir subpastas
   }
 
   async uploadFile(file: File, path = 'uploads'): Promise<string> {
-    const bucket = this.storage.bucket(this.getBucketName());
+    const { storage, bucket } = this.initStorage();
+    const bucketInstance = storage.bucket(this.getBucketName());
     const extension = SUPPORTED_MIMETYPES[file.type as SupportedMimeType] || '';
     const fileName = `${nanoid()}${extension}`;
     const fullPath = `${path}/${fileName}`;
-    const blob = bucket.file(fullPath);
+    const blob = bucketInstance.file(fullPath);
 
     // Converter File para Buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -62,20 +70,22 @@ class GoogleCloudStorageProvider implements StorageProvider {
       },
     });
 
-    return `https://storage.googleapis.com/${this.bucket}/${fullPath}`;
+    return `https://storage.googleapis.com/${bucket}/${fullPath}`;
   }
 
   async deleteFile(url: string): Promise<void> {
-    const prefix = `https://storage.googleapis.com/${this.bucket}/`;
+    const { storage, bucket } = this.initStorage();
+    const prefix = `https://storage.googleapis.com/${bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = storage.bucket(bucket).file(filePath);
     await file.delete();
   }
 
   async getSignedUrl(url: string, expiresIn = 3600): Promise<string> {
-    const prefix = `https://storage.googleapis.com/${this.bucket}/`;
+    const { storage, bucket } = this.initStorage();
+    const prefix = `https://storage.googleapis.com/${bucket}/`;
     const filePath = url.replace(prefix, '');
-    const file = this.storage.bucket(this.bucket).file(filePath);
+    const file = storage.bucket(bucket).file(filePath);
     
     const [signedUrl] = await file.getSignedUrl({
       version: 'v4',
