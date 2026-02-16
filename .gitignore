@@ -42,3 +42,9 @@ next-env.d.ts
 service-account-key.json
 prisma/dev.db
 config/keys/*.json
+
+# backups
+*.bak
+
+# uploads
+/public/uploads
