@@ -39,7 +39,7 @@
     "markdown-it": "^14.1.0",
     "nanoid": "^5.1.6",
     "next": "^15.5.14",
-    "next-auth": "^3.29.10",
+    "next-auth": "^4.24.14",
     "pdfjs-dist": "^5.4.296",
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4",
