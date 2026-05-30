@@ -8,16 +8,25 @@ import { MarketTrendsAPI } from '@/server/analysis/market-trends';
 import { CompetitiveAnalyzer } from '@/server/analysis/competitive';
 import { AudienceInsightService } from '@/server/analysis/audience';
 
-const analyzer = new StrategicAnalyzer(
-  new OpenAIProvider(),
-  new MarketTrendsAPI(),
-  new CompetitiveAnalyzer(),
-  new AudienceInsightService()
-);
+// Lazy initialization
+let analyzerInstance: StrategicAnalyzer | null = null;
+
+function getAnalyzer() {
+  if (!analyzerInstance) {
+    analyzerInstance = new StrategicAnalyzer(
+      new OpenAIProvider(),
+      new MarketTrendsAPI(),
+      new CompetitiveAnalyzer(),
+      new AudienceInsightService()
+    );
+  }
+  return analyzerInstance;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { content, format, exportType, topic = 'general' } = await req.json();
+    const analyzer = getAnalyzer();
 
     if (!content || typeof content !== 'string') {
       return Response.json(
