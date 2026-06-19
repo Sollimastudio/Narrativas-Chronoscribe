@@ -13,17 +13,34 @@ async function loadPdfJs() {
   return pdfjs as any;
 }
 
-// Initialize Google Cloud Storage using service account credentials
-const credentials = getGoogleCredentials();
-const storage = new Storage({
-  projectId: credentials.project_id,
-  credentials: {
-    client_email: credentials.client_email,
-    private_key: credentials.private_key,
-  },
-});
+// Lazy initialization of Google Cloud Storage
+let storageClient: Storage | null = null;
+let bucketInstance: any = null;
 
-const bucket = storage.bucket(env.GOOGLE_STORAGE_BUCKET);
+function getStorageClient() {
+  if (!storageClient) {
+    const credentials = getGoogleCredentials();
+    storageClient = new Storage({
+      projectId: credentials.project_id,
+      credentials: {
+        client_email: credentials.client_email,
+        private_key: credentials.private_key,
+      },
+    });
+  }
+  return storageClient;
+}
+
+function getBucket() {
+  if (!bucketInstance) {
+    const storage = getStorageClient();
+    if (!env.GOOGLE_STORAGE_BUCKET) {
+      throw new Error('GOOGLE_STORAGE_BUCKET não configurado');
+    }
+    bucketInstance = storage.bucket(env.GOOGLE_STORAGE_BUCKET);
+  }
+  return bucketInstance;
+}
 
 async function extractFromPdf(input: ArrayBuffer | Buffer): Promise<string> {
   const data = Buffer.isBuffer(input) ? input : Buffer.from(input);
@@ -91,6 +108,7 @@ export async function POST(req: NextRequest) {
 
       // Try Google Cloud Storage first
       try {
+        const bucket = getBucket();
         const blob = bucket.file(filename);
         const blobStream = blob.createWriteStream({
           resumable: false,
@@ -100,7 +118,7 @@ export async function POST(req: NextRequest) {
 
         await new Promise((resolve, reject) => {
           blobStream.on('finish', resolve);
-          blobStream.on('error', (err) => {
+          blobStream.on('error', (err: Error) => {
             console.error('GCS Upload Error:', err);
             reject(new Error('Could not upload the file.'));
           });

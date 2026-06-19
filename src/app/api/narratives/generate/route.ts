@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAIProvider } from '@/server/ai/openai-provider';
 
-const provider = new OpenAIProvider();
+// Lazy initialization
+let providerInstance: OpenAIProvider | null = null;
+
+function getProvider() {
+  if (!providerInstance) {
+    providerInstance = new OpenAIProvider();
+  }
+  return providerInstance;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { format, style, analysis } = await req.json();
+    const provider = getProvider();
 
     if (!format || !style || !analysis) {
       return NextResponse.json(
