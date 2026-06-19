@@ -12,8 +12,8 @@ const envSchema = z.object({
   OPENAI_BASE_URL: z.string().url().optional(),
   GEMINI_API_KEY: z.string().min(1).optional(),
   GEMINI_MODEL: z.string().min(1).optional(),
-  GOOGLE_CLOUD_PROJECT: z.string().min(1),
-  GOOGLE_STORAGE_BUCKET: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT: z.string().min(1).optional(),
+  GOOGLE_STORAGE_BUCKET: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().min(1).optional(),
   GOOGLE_APPLICATION_CREDENTIALS_BASE64: z.string().optional(),
 
@@ -41,12 +41,15 @@ const envSchema = z.object({
 const raw = envSchema.parse(process.env);
 
 // Early gating em variáveis essenciais
+const isProd = raw.NODE_ENV === 'production';
 const hasAuthSecret = Boolean(raw.AUTH_SECRET || raw.NEXTAUTH_SECRET);
 const missing = [
   hasAuthSecret ? null : 'AUTH_SECRET/NEXTAUTH_SECRET',
   !raw.DATABASE_URL ? 'DATABASE_URL' : null,
-  !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
-  !raw.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
+  // NEXTAUTH_URL só é obrigatória em produção
+  isProd && !raw.NEXTAUTH_URL ? 'NEXTAUTH_URL' : null,
+  // OPENAI_API_KEY é opcional - app funciona em modo simulado sem ela
+  // Google Cloud é opcional - app pode funcionar sem upload para nuvem
 ].filter(Boolean) as string[];
 if (missing.length) {
   throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(', ')}. Configure seu .env.local.`);
@@ -56,6 +59,8 @@ if (missing.length) {
 export const env = {
   ...raw,
   authSecret: (raw.AUTH_SECRET || raw.NEXTAUTH_SECRET || ''),
+  GOOGLE_CLOUD_PROJECT: raw.GOOGLE_CLOUD_PROJECT ?? '',
+  GOOGLE_STORAGE_BUCKET: raw.GOOGLE_STORAGE_BUCKET ?? '',
   openAI: {
     baseUrl: raw.OPENAI_BASE_URL ?? 'https://api.openai.com/v1',
     apiKey: raw.OPENAI_API_KEY ?? '',
@@ -113,6 +118,11 @@ function normalizePrivateKey(k: string): string {
 
 export function getGoogleCredentials(): GoogleCredentials {
   const expectedProject = env.GOOGLE_CLOUD_PROJECT;
+  
+  // Se não há projeto configurado, retornar credenciais vazias (modo desenvolvimento sem Google Cloud)
+  if (!expectedProject) {
+    throw new Error('Google Cloud não configurado. Configure GOOGLE_CLOUD_PROJECT e GOOGLE_STORAGE_BUCKET para usar upload na nuvem.');
+  }
 
   // 1) Preferir credenciais codificadas (deploys)
   const encodedCredentials = process.env.GOOGLE_APPLICATION_CREDENTIALS_BASE64;
