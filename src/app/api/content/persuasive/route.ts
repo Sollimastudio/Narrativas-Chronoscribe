@@ -9,7 +9,15 @@ import {
 } from '@/server/ai/persuasive-prompts';
 import type { ContentType, ConversionObjective, NarrativeStyle } from '@/server/ai/constitution';
 
-const provider = new OpenAIProvider();
+// Lazy initialization
+let providerInstance: OpenAIProvider | null = null;
+
+function getProvider() {
+  if (!providerInstance) {
+    providerInstance = new OpenAIProvider();
+  }
+  return providerInstance;
+}
 
 export const runtime = 'nodejs';
 
@@ -90,6 +98,7 @@ async function handleGenerate(data: {
   });
 
   try {
+    const provider = getProvider();
     const result = await provider.generate({
       systemPrompt,
       userPrompt,
@@ -150,6 +159,7 @@ async function handleAnalyze(data: {
   });
 
   try {
+    const provider = getProvider();
     const result = await provider.generate({
       systemPrompt,
       userPrompt,
@@ -207,6 +217,7 @@ async function handleArt(data: {
   });
 
   try {
+    const provider = getProvider();
     const result = await provider.generate({
       systemPrompt: 'Você é um diretor de arte profissional especializado em criar prompts ultra-detalhados para geração de imagens.',
       userPrompt: prompt,
