@@ -6,9 +6,9 @@ import MarkdownIt from 'markdown-it';
 const md = new MarkdownIt();
 
 interface SharePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function getSharedContent(id: string): Promise<GeneratedNarrative | null> {
@@ -40,7 +40,8 @@ function sectionsToMarkdown(n: GeneratedNarrative): string {
 }
 
 export default async function SharePage({ params }: SharePageProps) {
-  const content = await getSharedContent(params.id);
+  const { id } = await params;
+  const content = await getSharedContent(id);
 
   if (!content) {
     notFound();
