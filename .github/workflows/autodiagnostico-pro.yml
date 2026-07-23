@@ -1,95 +1,53 @@
-name: 🧠 AutoDiagnóstico Pro Autocorretivo do Narrativas-Chronoscribe
+name: Diagnóstico Pro manual e não destrutivo
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 10 * * *"  # Executa diariamente às 10h UTC
+
+permissions:
+  contents: read
 
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: 🧩 Clonar repositório
+      - name: Clonar repositório
         uses: actions/checkout@v4
 
-      - name: ⚙️ Instalar Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
-      - name: 📦 Instalar dependências
-        id: install
+      - name: Instalar dependências fixadas no lockfile
+        run: npm ci --legacy-peer-deps
+
+      - name: Exibir versões críticas
         run: |
-          echo "🔍 Verificando dependências..."
-          if [ -f package.json ]; then
-            npm install --legacy-peer-deps || echo "⚠️ Erro na instalação, tentando correção..."
-            npm audit fix --force || true
-          else
-            echo "❌ Nenhum package.json encontrado!"
-          fi
+          node --version
+          npm --version
+          node -e "const p=require('./package.json'); console.log({next:p.dependencies?.next,nextAuth:p.dependencies?.['next-auth'],react:p.dependencies?.react})"
 
-      - name: 🧱 Testar build do Next.js
-        id: build
-        run: |
-          echo "🧱 Testando build..."
-          if npm run build --if-present; then
-            echo "✅ Build ok!"
-          else
-            echo "⚠️ Build falhou, aplicando correções automáticas..."
-            npx tailwindcss init -p || true
-            npm install tailwindcss postcss autoprefixer --save-dev || true
-            npm run build --if-present || true
-          fi
+      - name: Auditar vulnerabilidades sem modificar arquivos
+        continue-on-error: true
+        run: npm audit --audit-level=high
 
-      - name: 🎨 Verificar e corrigir Tailwind
-        id: tailwind
-        run: |
-          echo "🎨 Verificando Tailwind e estilos..."
-          if [ ! -f tailwind.config.ts ] && [ ! -f tailwind.config.js ]; then
-            echo "⚙️ Gerando nova configuração Tailwind..."
-            npx tailwindcss init -p
-          fi
-          echo "✅ Tailwind verificado."
+      - name: Executar testes
+        run: npm run test --if-present
 
-      - name: 🧭 Testar layout visual (Puppeteer)
-        id: visual
-        run: |
-          echo "🧭 Iniciando teste visual com Puppeteer..."
-          npm install puppeteer --save-dev || true
-          nohup npm run dev > /dev/null 2>&1 &
-          sleep 10
-          node -e "
-          const puppeteer = require('puppeteer');
-          (async () => {
-            const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox']});
-            const page = await browser.newPage();
-            await page.goto('http://localhost:3100', {waitUntil: 'domcontentloaded'});
-            await page.screenshot({path: 'layout-check.png'});
-            console.log('🖼️ Screenshot capturada com sucesso!');
-            await browser.close();
-          })();
-          "
-          echo "✅ Verificação visual concluída."
+      - name: Executar build
+        run: npm run build
 
-      - name: 🧠 Criar Issue com relatório (se falhou)
-        if: failure()
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: "🚨 Diagnóstico Automático - Falha detectada em ${{ github.run_id }}"
-          content-filepath: ./diagnostico.log
-          labels: autodiagnostico, erro, sistema
-
-      - name: 🔁 Commit autocorretivo (se aplicável)
+      - name: Publicar resumo
         if: always()
         run: |
-          echo "🔄 Preparando commit de autocorreção..."
-          git config user.name "autodiagnostico-bot"
-          git config user.email "bot@github.com"
-          git add .
-          git commit -m "🧩 Correções automáticas aplicadas pelo AutoDiagnóstico Pro" || echo "Nenhuma alteração para commitar."
-          git push || echo "⚠️ Sem permissões para push direto."
-
-      - name: ✅ Conclusão
-        run: echo "🧠 AutoDiagnóstico concluído com verificação e correção automática!"
-
+          {
+            echo "## Diagnóstico Pro"
+            echo
+            echo "- Execução: $GITHUB_RUN_ID"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Nenhum npm audit fix foi executado."
+            echo "- Nenhum arquivo, commit, issue ou push foi criado pelo workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
