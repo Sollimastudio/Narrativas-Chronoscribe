@@ -1,78 +1,43 @@
-name: 🤖 AutoDiagnóstico Diário do Narrativas-Chronoscribe
+name: Diagnóstico manual do Narrativas-Chronoscribe
 
 on:
-  schedule:
-    - cron: "0 10 * * *" # Executa todos os dias às 10h UTC
-  workflow_dispatch:      # Permite rodar manualmente também
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   diagnostico:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
-      - name: 🔄 Clonar repositório
+      - name: Clonar repositório
         uses: actions/checkout@v4
 
-      - name: ⚙️ Instalar Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+          cache: npm
 
-      - name: 📦 Instalar dependências
-        run: |
-          if [ -f package.json ]; then
-            echo "🔍 Instalando dependências do projeto..."
-            npm install --legacy-peer-deps || echo "⚠️ Erro ao instalar dependências"
-          else
-            echo "⚠️ Nenhum package.json encontrado. Verifique a estrutura do projeto."
-          fi
+      - name: Instalar dependências sem alterar versões
+        run: npm ci --legacy-peer-deps
 
-      - name: 🧪 Testar build do projeto
-        run: |
-          echo "🏗️ Iniciando teste de build..."
-          if [ -f package.json ]; then
-            npm run build || echo "❌ Erro ao executar o build do projeto"
-          else
-            echo "🚫 Nenhum build script encontrado no package.json"
-          fi
+      - name: Executar testes existentes
+        run: npm run test --if-present
 
-      - name: 🔍 Verificar arquivos críticos
-        run: |
-          echo "🧠 Verificando arquivos essenciais..."
-          for file in ".env.local" "prisma/schema.prisma" "src/app/page.tsx"; do
-            if [ -f "$file" ]; then
-              echo "✅ Encontrado: $file"
-            else
-              echo "⚠️ Ausente: $file"
-            fi
-          done
+      - name: Testar build
+        run: npm run build
 
-      - name: 🧾 Gerar relatório de diagnóstico
-        id: report
-        run: |
-          echo "📋 Gerando relatório..."
-          echo "## 🧠 Relatório de Diagnóstico - $(date)" > diagnostico.md
-          echo "" >> diagnostico.md
-          echo "### 🔹 Projeto:" >> diagnostico.md
-          echo "$(basename $(pwd))" >> diagnostico.md
-          echo "" >> diagnostico.md
-          echo "### 🔹 Logs resumidos:" >> diagnostico.md
-          echo "" >> diagnostico.md
-          tail -n 40 $(find . -type f -name "*.log" 2>/dev/null | head -n 1) >> diagnostico.md || echo "Nenhum log encontrado" >> diagnostico.md
-          echo "" >> diagnostico.md
-          echo "✅ Diagnóstico concluído em $(date)" >> diagnostico.md
-
-      - name: 🧾 Mostrar resultado no console
-        run: cat diagnostico.md
-
-      - name: 🪶 Criar Issue automática com resultado
+      - name: Registrar resultado
         if: always()
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: "📡 AutoDiagnóstico - $(date +'%d/%m/%Y %H:%M')"
-          content-filepath: diagnostico.md
-          labels: |
-            autodiagnostico
-            agente
-          token: ${{ secrets.GITHUB_TOKEN }}
-
+        run: |
+          {
+            echo "## Diagnóstico manual"
+            echo
+            echo "- Execução: $GITHUB_RUN_ID"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Acionamento: somente manual"
+            echo "- Permissão do workflow: leitura"
+          } >> "$GITHUB_STEP_SUMMARY"
